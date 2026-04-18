@@ -75,7 +75,6 @@ export default function Register() {
         <title>புதிய கணக்கு — தமிழ் AI பயண திட்டமிடுபவர்</title>
         <meta name="description" content="தமிழ் AI பயண திட்டமிடுபவரில் புதிய கணக்கு உருவாக்குங்கள்" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
       <div style={pageStyle}>
@@ -85,13 +84,10 @@ export default function Register() {
         <div style={orb3Style}></div>
 
         <div style={cardContainerStyle}>
-          {/* Logo / Brand */}
+          {/* Brand */}
           <div style={brandStyle}>
-            <div style={logoCircleStyle}>
-              <i className="ri-plane-fill" style={{ color: '#fff', fontSize: '32px' }}></i>
-            </div>
             <h1 style={brandTitleStyle}>தமிழ் AI பயண திட்டமிடுபவர்</h1>
-            <p style={brandSubStyle}>தமிழ் AI பயண திட்டமிடுபவர்</p>
+            <p style={brandSubStyle}>உங்கள் கணக்கை உருவாக்கி பயண திட்டங்களை தொடங்குங்கள்</p>
           </div>
 
           {/* Register Card */}
@@ -158,6 +154,9 @@ export default function Register() {
                     style={inputStyle}
                     autoComplete="tel"
                   />
+                  <div style={{ fontSize: 12, color: '#737373', marginTop: 6 }}>
+                    கடவுச்சொல் மறந்தால் OTP அனுப்ப இந்த எண் பயன்படும்
+                  </div>
                 </div>
 
                 {error && <div style={errorStyle}><i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{error}</div>}
@@ -415,19 +414,6 @@ const brandStyle = {
   marginBottom: 24,
 };
 
-const logoCircleStyle = {
-  width: 72,
-  height: 72,
-  borderRadius: '50%',
-  background: '#2887ff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: 36,
-  margin: '0 auto 16px',
-  boxShadow: '0 8px 32px rgba(40, 135, 255, 0.4)',
-};
-
 const brandTitleStyle = {
   color: '#0a0a0a',
   fontSize: 22,
@@ -439,7 +425,7 @@ const brandTitleStyle = {
 const brandSubStyle = {
   color: '#737373',
   fontSize: 13,
-  marginTop: 6,
+  marginTop: 8,
 };
 
 const cardStyle = {
