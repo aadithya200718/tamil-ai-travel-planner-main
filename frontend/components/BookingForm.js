@@ -38,7 +38,10 @@ export default function BookingForm({ travelOption, source, destination, onBooki
         body: JSON.stringify({
           travelOption: {
             type: travelOption.type,
+            routeId: travelOption.routeId,
             name: travelOption.name,
+            serviceType: travelOption.serviceType,
+            referenceNumber: travelOption.referenceNumber,
             price: travelOption.price,
             duration: travelOption.duration,
           },
