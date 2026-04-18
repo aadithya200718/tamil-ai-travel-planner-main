@@ -1,18 +1,57 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { loginUser } from '../services/api';
+import {
+  loginUser,
+  sendForgotPasswordOtp,
+  resetPasswordWithOtp,
+} from '../services/api';
 
 export default function Login() {
   const router = useRouter();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [maskedPhone, setMaskedPhone] = useState('');
+  const [resetForm, setResetForm] = useState({
+    email: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
   function updateField(field, value) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
     setError('');
+    setSuccess('');
+  }
+
+  function updateResetField(field, value) {
+    setResetForm((prev) => ({ ...prev, [field]: value }));
+    setResetError('');
+    setResetSuccess('');
+    setSuccess('');
+  }
+
+  function toggleForgotPassword() {
+    setForgotOpen((prev) => !prev);
+    setResetError('');
+    setResetSuccess('');
+    setMaskedPhone('');
+    setOtpSent(false);
+    setResetForm((prev) => ({
+      email: prev.email || form.email,
+      code: '',
+      newPassword: '',
+      confirmPassword: '',
+    }));
   }
 
   async function handleSubmit(e) {
@@ -21,8 +60,11 @@ export default function Login() {
       setError('அனைத்து புலங்களையும் நிரப்பவும்');
       return;
     }
+
     setLoading(true);
     setError('');
+    setSuccess('');
+
     try {
       const data = await loginUser({ email: form.email, password: form.password });
       localStorage.setItem('authToken', data.user.token);
@@ -36,45 +78,114 @@ export default function Login() {
     }
   }
 
+  async function handleSendOtp() {
+    const email = resetForm.email.trim();
+    if (!email) {
+      setResetError('OTP அனுப்ப மின்னஞ்சலை உள்ளிடவும்');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+
+    try {
+      const data = await sendForgotPasswordOtp({ email });
+      setOtpSent(true);
+      setMaskedPhone(data.maskedPhone || '');
+      setResetSuccess(data.message || 'OTP அனுப்பப்பட்டது');
+      setForm((prev) => ({ ...prev, email }));
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function handlePasswordReset(e) {
+    e.preventDefault();
+
+    const email = resetForm.email.trim();
+    const code = resetForm.code.trim();
+    const newPassword = resetForm.newPassword;
+    const confirmPassword = resetForm.confirmPassword;
+
+    if (!email || !code || !newPassword || !confirmPassword) {
+      setResetError('அனைத்து மீட்பு புலங்களையும் நிரப்பவும்');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setResetError('புதிய கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetError('புதிய கடவுச்சொற்கள் பொருந்தவில்லை');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+
+    try {
+      const data = await resetPasswordWithOtp({ email, code, newPassword });
+      setSuccess(data.message || 'கடவுச்சொல் மாற்றப்பட்டது');
+      setForgotOpen(false);
+      setOtpSent(false);
+      setMaskedPhone('');
+      setForm((prev) => ({ ...prev, email, password: '' }));
+      setResetForm({
+        email,
+        code: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   return (
     <>
       <Head>
         <title>உள்நுழைவு — தமிழ் AI பயண திட்டமிடுபவர்</title>
-        <meta name="description" content="தமிழ் AI பயண திட்டமிடுபவரில் உள்நுழைக" />
+        <meta
+          name="description"
+          content="தமிழ் AI பயண திட்டமிடுபவரில் உள்நுழைக"
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
       <div style={pageStyle}>
-        {/* Animated background orbs */}
         <div style={orb1Style}></div>
         <div style={orb2Style}></div>
         <div style={orb3Style}></div>
 
         <div style={cardContainerStyle}>
-          {/* Logo / Brand */}
           <div style={brandStyle}>
-            <div style={logoCircleStyle}>
-              <i className="ri-plane-fill" style={{ color: '#fff', fontSize: '32px' }}></i>
-            </div>
             <h1 style={brandTitleStyle}>தமிழ் AI பயண திட்டமிடுபவர்</h1>
-            <p style={brandSubStyle}>தமிழ் AI பயண திட்டமிடுபவர்</p>
+            <p style={brandSubStyle}>பாதுகாப்பாக உள்நுழைந்து உங்கள் பயணங்களை தொடருங்கள்</p>
           </div>
 
-          {/* Login Card */}
           <div style={cardStyle}>
             <h2 style={cardTitleStyle}>உள்நுழைவு</h2>
             <p style={cardDescStyle}>உங்கள் கணக்கில் உள்நுழையுங்கள்</p>
 
             <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-              {/* Email */}
               <div style={fieldGroupStyle}>
-                <label style={labelStyle}><i className="ri-mail-line" style={{ marginRight: '8px' }}></i>மின்னஞ்சல்</label>
+                <label style={labelStyle}>
+                  <i className="ri-mail-line" style={{ marginRight: '8px' }}></i>
+                  மின்னஞ்சல்
+                </label>
                 <input
                   id="login-email"
                   type="email"
                   value={form.email}
-                  onChange={e => updateField('email', e.target.value)}
+                  onChange={(e) => updateField('email', e.target.value)}
                   placeholder="உதாரணம்@email.com"
                   style={inputStyle}
                   autoComplete="email"
@@ -82,15 +193,17 @@ export default function Login() {
                 />
               </div>
 
-              {/* Password */}
               <div style={fieldGroupStyle}>
-                <label style={labelStyle}><i className="ri-lock-line" style={{ marginRight: '8px' }}></i>கடவுச்சொல்</label>
+                <label style={labelStyle}>
+                  <i className="ri-lock-line" style={{ marginRight: '8px' }}></i>
+                  கடவுச்சொல்
+                </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
-                    onChange={e => updateField('password', e.target.value)}
+                    onChange={(e) => updateField('password', e.target.value)}
                     placeholder="குறைந்தது 6 எழுத்துகள்"
                     style={{ ...inputStyle, paddingRight: 48 }}
                     autoComplete="current-password"
@@ -98,23 +211,42 @@ export default function Login() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(v => !v)}
+                    onClick={() => setShowPassword((value) => !value)}
                     style={eyeBtnStyle}
                     tabIndex={-1}
                   >
-                    <i className={showPassword ? "ri-eye-off-line" : "ri-eye-line"} style={{ color: '#0a0a0a' }}></i>
+                    <i
+                      className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}
+                      style={{ color: '#0a0a0a' }}
+                    ></i>
                   </button>
                 </div>
               </div>
 
-              {/* Error */}
-              {error && (
-                <div style={errorStyle}>
-                  <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{error}
+              <div style={helperRowStyle}>
+                <button
+                  type="button"
+                  onClick={toggleForgotPassword}
+                  style={textButtonStyle}
+                >
+                  கடவுச்சொல்லை மறந்துவிட்டீர்களா?
+                </button>
+              </div>
+
+              {success && (
+                <div style={successStyle}>
+                  <i className="ri-checkbox-circle-line" style={{ marginRight: '8px' }}></i>
+                  {success}
                 </div>
               )}
 
-              {/* Submit */}
+              {error && (
+                <div style={errorStyle}>
+                  <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>
+                  {error}
+                </div>
+              )}
+
               <button
                 id="login-submit"
                 type="submit"
@@ -122,7 +254,14 @@ export default function Login() {
                 disabled={loading}
               >
                 {loading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
                     <span style={spinnerStyle}></span>
                     உள்நுழைகிறது…
                   </span>
@@ -135,13 +274,130 @@ export default function Login() {
               </button>
             </form>
 
-            {/* Register link */}
+            {forgotOpen && (
+              <div style={forgotCardStyle}>
+                <div style={forgotHeaderStyle}>
+                  <h3 style={forgotTitleStyle}>OTP மூலம் கடவுச்சொல் மாற்றம்</h3>
+                  <p style={forgotDescStyle}>
+                    பதிவு செய்யப்பட்ட தொலைபேசி எண்ணுக்கு Twilio மூலம் OTP அனுப்பப்படும்.
+                  </p>
+                </div>
+
+                <form onSubmit={handlePasswordReset}>
+                  <div style={fieldGroupStyle}>
+                    <label style={labelStyle}>
+                      <i className="ri-mail-line" style={{ marginRight: '8px' }}></i>
+                      மின்னஞ்சல்
+                    </label>
+                    <input
+                      type="email"
+                      value={resetForm.email}
+                      onChange={(e) => updateResetField('email', e.target.value)}
+                      placeholder="உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சல்"
+                      style={inputStyle}
+                      autoComplete="email"
+                      disabled={resetLoading}
+                    />
+                  </div>
+
+                  <div style={forgotActionRowStyle}>
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      style={secondaryBtnStyle(resetLoading)}
+                      disabled={resetLoading}
+                    >
+                      {resetLoading && !otpSent ? 'OTP அனுப்புகிறது…' : 'OTP அனுப்பு'}
+                    </button>
+                    {maskedPhone && <span style={noteStyle}>அனுப்பிய எண்: {maskedPhone}</span>}
+                  </div>
+
+                  {resetSuccess && (
+                    <div style={successStyle}>
+                      <i className="ri-checkbox-circle-line" style={{ marginRight: '8px' }}></i>
+                      {resetSuccess}
+                    </div>
+                  )}
+
+                  {resetError && (
+                    <div style={errorStyle}>
+                      <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>
+                      {resetError}
+                    </div>
+                  )}
+
+                  {otpSent && (
+                    <>
+                      <div style={fieldGroupStyle}>
+                        <label style={labelStyle}>
+                          <i className="ri-shield-keyhole-line" style={{ marginRight: '8px' }}></i>
+                          OTP
+                        </label>
+                        <input
+                          type="text"
+                          value={resetForm.code}
+                          onChange={(e) => updateResetField('code', e.target.value)}
+                          placeholder="6 இலக்க OTP"
+                          style={inputStyle}
+                          autoComplete="one-time-code"
+                          disabled={resetLoading}
+                        />
+                      </div>
+
+                      <div style={fieldGroupStyle}>
+                        <label style={labelStyle}>
+                          <i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>
+                          புதிய கடவுச்சொல்
+                        </label>
+                        <input
+                          type="password"
+                          value={resetForm.newPassword}
+                          onChange={(e) => updateResetField('newPassword', e.target.value)}
+                          placeholder="புதிய கடவுச்சொல்"
+                          style={inputStyle}
+                          autoComplete="new-password"
+                          disabled={resetLoading}
+                        />
+                      </div>
+
+                      <div style={fieldGroupStyle}>
+                        <label style={labelStyle}>
+                          <i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>
+                          புதிய கடவுச்சொல் உறுதிப்படுத்தல்
+                        </label>
+                        <input
+                          type="password"
+                          value={resetForm.confirmPassword}
+                          onChange={(e) => updateResetField('confirmPassword', e.target.value)}
+                          placeholder="புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்"
+                          style={inputStyle}
+                          autoComplete="new-password"
+                          disabled={resetLoading}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        style={submitBtnStyle(resetLoading)}
+                        disabled={resetLoading}
+                      >
+                        {resetLoading ? 'கடவுச்சொல் மாற்றுகிறது…' : 'கடவுச்சொல்லை மாற்று'}
+                      </button>
+                    </>
+                  )}
+                </form>
+              </div>
+            )}
+
             <div style={linkSectionStyle}>
               <p style={{ margin: 0, color: '#8e99a4', fontSize: 14 }}>
                 கணக்கு இல்லையா?{' '}
                 <a
                   href="/register"
-                  onClick={e => { e.preventDefault(); router.push('/register'); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    router.push('/register');
+                  }}
                   style={linkStyle}
                 >
                   புதிய கணக்கு உருவாக்கு →
@@ -150,7 +406,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Footer */}
           <p style={footerStyle}>
             © 2026 தமிழ் AI பயண திட்டமிடுபவர் — அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை
           </p>
@@ -192,8 +447,6 @@ export default function Login() {
     </>
   );
 }
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const pageStyle = {
   minHeight: '100vh',
@@ -247,26 +500,13 @@ const cardContainerStyle = {
   position: 'relative',
   zIndex: 1,
   width: '100%',
-  maxWidth: 420,
+  maxWidth: 440,
   animation: 'fadeInUp 0.6s ease-out',
 };
 
 const brandStyle = {
   textAlign: 'center',
   marginBottom: 28,
-};
-
-const logoCircleStyle = {
-  width: 72,
-  height: 72,
-  borderRadius: '50%',
-  background: '#2887ff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: 36,
-  margin: '0 auto 16px',
-  boxShadow: '0 8px 32px rgba(40, 135, 255, 0.4)',
 };
 
 const brandTitleStyle = {
@@ -280,7 +520,7 @@ const brandTitleStyle = {
 const brandSubStyle = {
   color: '#737373',
   fontSize: 13,
-  marginTop: 6,
+  marginTop: 8,
 };
 
 const cardStyle = {
@@ -344,14 +584,56 @@ const eyeBtnStyle = {
   padding: 4,
 };
 
-const errorStyle = {
+const helperRowStyle = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  marginTop: -4,
   marginBottom: 16,
-  padding: '12px 16px',
-  background: '#fde8e8',
-  border: '1px solid #f5c6c6',
-  borderRadius: '5rem',
-  color: '#c0392b',
+};
+
+const textButtonStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#2887ff',
+  cursor: 'pointer',
   fontSize: 14,
+  fontWeight: 600,
+  fontFamily: 'inherit',
+  padding: 0,
+};
+
+const forgotCardStyle = {
+  marginTop: 20,
+  padding: '20px 18px',
+  borderRadius: 16,
+  background: 'rgba(40,135,255,0.06)',
+  border: '1px solid rgba(40,135,255,0.12)',
+};
+
+const forgotHeaderStyle = {
+  marginBottom: 16,
+};
+
+const forgotTitleStyle = {
+  margin: 0,
+  color: '#0a0a0a',
+  fontSize: 18,
+  fontWeight: 700,
+};
+
+const forgotDescStyle = {
+  margin: '6px 0 0',
+  color: '#5f6b76',
+  fontSize: 13,
+  lineHeight: 1.5,
+};
+
+const forgotActionRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  marginBottom: 16,
+  flexWrap: 'wrap',
 };
 
 function submitBtnStyle(loading) {
@@ -370,6 +652,47 @@ function submitBtnStyle(loading) {
     marginTop: 4,
   };
 }
+
+function secondaryBtnStyle(loading) {
+  return {
+    padding: '12px 18px',
+    borderRadius: '5rem',
+    border: '1px solid #2887ff',
+    background: loading ? '#dbeafe' : '#ffffff',
+    color: '#2887ff',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: loading ? 'not-allowed' : 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all 0.3s ease',
+  };
+}
+
+const noteStyle = {
+  color: '#4b5563',
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const errorStyle = {
+  marginBottom: 16,
+  padding: '12px 16px',
+  background: '#fde8e8',
+  border: '1px solid #f5c6c6',
+  borderRadius: '5rem',
+  color: '#c0392b',
+  fontSize: 14,
+};
+
+const successStyle = {
+  marginBottom: 16,
+  padding: '12px 16px',
+  background: '#e7f8ee',
+  border: '1px solid #b7e4c7',
+  borderRadius: '5rem',
+  color: '#1e7a46',
+  fontSize: 14,
+};
 
 const spinnerStyle = {
   display: 'inline-block',

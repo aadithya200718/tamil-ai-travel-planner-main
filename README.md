@@ -30,8 +30,10 @@ tamil-ai-travel-planner/
 
 - 🗣️ **Tamil Voice Input** — record audio and transcribe using local Whisper (no API key needed)
 - ⌨️ **Text Input** — type queries in Tamil or English
+- 🌐 **Smart Translation** — automatically translates Tamil place names and budget terms to English for database queries
 - 🤖 **Intent Detection** — keyword-based NLP for Tamil travel vocabulary
 - 📍 **Entity Extraction** — source city, destination city, travel date, budget
+- 💰 **Budget-Aware Search** — supports Tamil budget terms (குறைந்த விலை, மலிவான, லக்ஷரி) and numeric prices
 - 🗺️ **Itinerary Generation** — Tamil-language day plans and travel option summaries
 - 🎫 **Mock Booking System** — book travel options with confirmation ID and PNR
 - 💰 **Conditional Cancellation** — refund policy based on timing (100% / 50% / 0%)
@@ -114,6 +116,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | GET    | /recent               | Returns last 10 queries + itineraries |
 | POST   | /query                | `{"text":"..."}` → NLP + itinerary generation |
 | POST   | /voice                | Multipart `audio` file → Whisper transcription + itinerary |
+| POST   | /search               | `{"query":"சென்னை"}` → Translates Tamil to English |
 | POST   | /book                 | `{travelOption, passengers, contactPhone}` → booking confirmation |
 | GET    | /booking/:id          | Get booking details by booking ID |
 | POST   | /booking/:id/cancel   | Cancel booking (conditional refund) |
@@ -210,9 +213,29 @@ CREATE TABLE bookings (
 ## Example Queries
 
 - `Chennai இருந்து Madurai பயண திட்டம் தேவை`
+- `சென்னை இருந்து மதுரை குறைந்த விலையில் செல்ல வேண்டும்` (with budget)
+- `கோவை லிருந்து ஊட்டி மலிவான பயணம்` (cheap travel)
 - `Ooty க்கு பட்ஜெட் trip plan`
+- `மதுரை லிருந்து ராமேஸ்வரம் லக்ஷரி` (luxury travel)
+- `Chennai to தேனி 500 ரூபாய்க்குள்` (with price limit)
 - `Rameswaram tourist places`
 - `I want to travel from Trichy to Kanyakumari`
+
+### Translation Feature
+
+The app now automatically translates Tamil place names and budget terms to English for database queries:
+
+**Place Names:**
+- சென்னை → Chennai
+- மதுரை → Madurai
+- கோவை → Coimbatore
+
+**Budget Terms:**
+- குறைந்த விலை / மலிவான / பட்ஜெட் → low
+- நடுத்தர விலை → medium
+- லக்ஷரி / ஆடம்பரமான → high
+
+See `backend/TRANSLATION_GUIDE.md` for complete documentation.
 
 ---
 

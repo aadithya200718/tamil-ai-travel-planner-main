@@ -225,6 +225,10 @@ background-color: var(--primary-color);
 
 }
 .destination__card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   border-radius: 1.5rem;
   box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.2);
 }  

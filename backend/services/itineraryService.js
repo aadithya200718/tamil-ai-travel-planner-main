@@ -3,6 +3,8 @@
  * Generates Tamil-language itinerary text templates based on intent and entities.
  */
 
+const { translateEntities } = require('./translationService');
+
 const DAY_PLANS = {
   'Chennai': [
     'காலை: மெரினா கடற்கரையில் உலாவுங்கள்',
@@ -76,7 +78,10 @@ const INTENT_HEADERS = {
  */
 function generateItinerary(nlpResult, travelOptions) {
   const { intent, entities } = nlpResult;
-  const { source, destination, date, budget } = entities || {};
+  
+  // Translate Tamil place names to English for database queries
+  const translatedEntities = translateEntities(entities);
+  const { source, destination, date, budget } = translatedEntities || {};
 
   const header = INTENT_HEADERS[intent] || '✈️ உங்கள் பயண திட்டம்';
 

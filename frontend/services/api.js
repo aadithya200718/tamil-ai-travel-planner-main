@@ -34,6 +34,32 @@ export async function loginUser({ email, password }) {
   return data;
 }
 
+export async function sendForgotPasswordOtp({ email }) {
+  const res = await fetch(`${BACKEND_URL}/auth/forgot-password/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'OTP அனுப்ப முடியவில்லை');
+  }
+  return data;
+}
+
+export async function resetPasswordWithOtp({ email, code, newPassword }) {
+  const res = await fetch(`${BACKEND_URL}/auth/forgot-password/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'கடவுச்சொல் மாற்ற முடியவில்லை');
+  }
+  return data;
+}
+
 /**
  * Get current user profile.
  */
@@ -53,11 +79,11 @@ export async function getProfile(token) {
  * @param {string} text
  * @returns {Promise<object>}
  */
-export async function sendQuery(text) {
+export async function sendQuery(text, mode = '') {
   const res = await fetch(`${BACKEND_URL}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, mode }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -71,9 +97,10 @@ export async function sendQuery(text) {
  * @param {Blob} audioBlob
  * @returns {Promise<object>}
  */
-export async function sendVoice(audioBlob) {
+export async function sendVoice(audioBlob, mode = '') {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
+  formData.append('mode', mode);
 
   const res = await fetch(`${BACKEND_URL}/voice`, {
     method: 'POST',
@@ -124,6 +151,45 @@ export async function createBooking(bookingData) {
     throw new Error(err.error || 'பதிவு தோல்வியடைந்தது');
   }
   return res.json();
+}
+
+export async function createPaymentOrderForBooking(paymentData) {
+  const res = await fetch(`${BACKEND_URL}/payment/create-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(paymentData),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'பணம் செலுத்தும் ஆர்டர் உருவாக்க முடியவில்லை');
+  }
+  return data;
+}
+
+export async function verifyBookingPayment(paymentData) {
+  const res = await fetch(`${BACKEND_URL}/payment/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(paymentData),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'பணம் செலுத்தும் சரிபார்ப்பு தோல்வியடைந்தது');
+  }
+  return data;
+}
+
+export async function refundBookingPayment({ bookingId, paymentId, amount }) {
+  const res = await fetch(`${BACKEND_URL}/payment/refund`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bookingId, paymentId, amount }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'refund தொடங்க முடியவில்லை');
+  }
+  return data;
 }
 
 /**

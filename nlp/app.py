@@ -5,6 +5,7 @@ app.py — Flask application for the Tamil AI Travel Planner NLP service.
 from flask import Flask, request, jsonify
 from main import process_text
 from transcribe import transcribe_from_bytes
+from api_service import get_real_travel_options
 
 app = Flask(__name__)
 
@@ -90,6 +91,22 @@ def transcribe():
             "error": f"குரல் அங்கீகாரம் தோல்வியடைந்தது: {str(e)}"
         }), 500
 
+
+@app.post("/travel-options")
+def travel_options():
+    try:
+        data = request.get_json(silent=True)
+        source = data.get("source", "")
+        destination = data.get("destination", "")
+        budget = data.get("budget", "medium")
+        
+        if not source or not destination:
+            return jsonify({"error": "Source and destination required"}), 400
+            
+        options = get_real_travel_options(source, destination, budget)
+        return jsonify(options), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)

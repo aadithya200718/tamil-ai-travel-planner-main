@@ -107,4 +107,32 @@ async function getUserById(userId) {
   return userRes.rows[0] || null;
 }
 
-module.exports = { registerUser, loginUser, verifyToken, getUserById, initUsersTable };
+async function getUserByEmail(email) {
+  const db = await getDb();
+  const userRes = await db.query(
+    'SELECT id, name, email, phone, password_hash, created_at FROM users WHERE LOWER(email) = LOWER($1)',
+    [email]
+  );
+  return userRes.rows[0] || null;
+}
+
+async function updateUserPassword(userId, password) {
+  const db = await getDb();
+  const salt = bcrypt.genSaltSync(10);
+  const passwordHash = bcrypt.hashSync(password, salt);
+
+  await db.query(
+    'UPDATE users SET password_hash = $1 WHERE id = $2',
+    [passwordHash, userId]
+  );
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+  verifyToken,
+  getUserById,
+  getUserByEmail,
+  updateUserPassword,
+  initUsersTable,
+};

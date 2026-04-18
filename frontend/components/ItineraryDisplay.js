@@ -67,15 +67,129 @@ export default function ItineraryDisplay({ result }) {
       {/* Itinerary text */}
       <pre style={itineraryStyle}>{result.itinerary}</pre>
 
-      {/* Travel options table with booking */}
-      {result.travelOptions?.options && (
-        <TravelOptionsTable
-          options={result.travelOptions.options}
-          source={source}
-          destination={destination}
-        />
+      {result.routeResults ? (
+        <RouteResultsTable routeResults={result.routeResults} />
+      ) : (
+        result.travelOptions?.options && (
+          <TravelOptionsTable
+            options={result.travelOptions.options}
+            source={source}
+            destination={destination}
+          />
+        )
       )}
     </div>
+  );
+}
+
+function RouteResultsTable({ routeResults }) {
+  const sections = [
+    { key: 'bus', title: '🚌 பேருந்து தரவுகள்', rows: routeResults.bus || [] },
+    { key: 'train', title: '🚂 ரயில் தரவுகள்', rows: routeResults.train || [] },
+  ].filter(section => section.rows.length > 0);
+
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <h3 style={{ fontSize: 15, marginBottom: 8, color: '#2c3e50' }}>📚 தரவுத்தள முடிவுகள்</h3>
+      {sections.map(section => (
+        <div key={section.key} style={{ marginBottom: 16 }}>
+          <div style={sectionTitleBadgeStyle}>{section.title}</div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginTop: 8 }}>
+            <thead>
+              <tr style={{ background: '#f0f0f0' }}>
+                <th style={thStyle}>புறப்படும் இடம்</th>
+                <th style={thStyle}>செல்லும் இடம்</th>
+                <th style={thStyle}>சேவை வகை</th>
+                <th style={thStyle}>எண்</th>
+                <th style={thStyle}>தூரம்</th>
+                <th style={thStyle}>கட்டணம்</th>
+                <th style={thStyle}>ஏறத்தாழ நேரம்</th>
+                <th style={thStyle}>பதிவு</th>
+              </tr>
+            </thead>
+            <tbody>
+              {section.rows.map((row, index) => (
+                <RouteResultRow key={`${section.key}-${row.id}`} row={row} index={index} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RouteResultRow({ row, index }) {
+  const [showBooking, setShowBooking] = useState(false);
+  const [bookingResult, setBookingResult] = useState(null);
+
+  function handleBookingComplete(data) {
+    setBookingResult(data);
+    setShowBooking(false);
+  }
+
+  if (bookingResult) {
+    return (
+      <tr>
+        <td colSpan="8" style={{ padding: 0 }}>
+          <BookingConfirmation
+            booking={bookingResult.booking}
+            onCancelled={() => {
+              // no-op for now
+            }}
+          />
+        </td>
+      </tr>
+    );
+  }
+
+  const bookingOption = {
+    type: row.mode,
+    routeId: row.id,
+    name: row.name,
+    price: row.price,
+    duration: row.duration,
+    serviceType: row.serviceType,
+    referenceNumber: row.trainNumber || '',
+  };
+
+  return (
+    <>
+      <tr style={{ background: index % 2 === 0 ? '#fafafa' : '#fff' }}>
+        <td style={tdStyle}>{row.source}</td>
+        <td style={tdStyle}>{row.destination}</td>
+        <td style={tdStyle}>{row.serviceType}</td>
+        <td style={tdStyle}>{row.trainNumber || '-'}</td>
+        <td style={tdStyle}>{row.distanceKm} கிமீ</td>
+        <td style={tdStyle}>₹{row.price}</td>
+        <td style={tdStyle}>{row.duration}</td>
+        <td style={tdStyle}>
+          <button
+            onClick={() => setShowBooking(!showBooking)}
+            style={showBooking ? closeBtnStyle : bookBtnStyle}
+          >
+            {showBooking ? '✕ மூடு' : '🎫 பதிவு செய்'}
+          </button>
+        </td>
+      </tr>
+      {showBooking && (
+        <tr>
+          <td colSpan="8" style={{ padding: '0 8px' }}>
+            <BookingForm
+              travelOption={bookingOption}
+              source={row.source}
+              destination={row.destination}
+              onBookingComplete={handleBookingComplete}
+              onCancel={() => setShowBooking(false)}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -201,6 +315,15 @@ const itineraryStyle = {
   fontSize: 14,
   lineHeight: 1.7,
   color: '#333',
+};
+const sectionTitleBadgeStyle = {
+  display: 'inline-block',
+  background: '#eef4ff',
+  color: '#1f4ea3',
+  borderRadius: 999,
+  padding: '6px 12px',
+  fontSize: 13,
+  fontWeight: 600,
 };
 const thStyle = { padding: '8px 10px', textAlign: 'left', borderBottom: '1px solid #ddd' };
 const tdStyle = { padding: '7px 10px', borderBottom: '1px solid #eee' };

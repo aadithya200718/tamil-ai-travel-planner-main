@@ -53,6 +53,14 @@ TAMIL_PLACES = [
     "Pondicherry", "Puducherry", "புதுச்சேரி",
 ]
 
+PLACE_ALIASES = {
+    "கோயம்புத்தூரு": "கோயம்புத்தூர்",
+    "தஞ்சாவூரு": "தஞ்சாவூர்",
+    "திருச்சியி": "திருச்சி",
+    "சேலத்து": "சேலம்",
+    "கும்பகோணத்து": "கும்பகோணம்",
+}
+
 # Regex patterns for source city
 # Tamil word order: "CITY இருந்து" — city comes BEFORE the postposition
 # English word order: "from CITY" — city comes AFTER the preposition
@@ -120,8 +128,8 @@ def _find_place_in_text(text: str, patterns: list[str]) -> str:
     return ""  # Don't use non-place fallback; rely on _find_known_places instead
 
 
-def _find_known_places(text: str) -> list[str]:
-    """Returns all known Tamil places found in the text, ordered by position in text."""
+def _find_known_places_with_idx(text: str) -> list[tuple[int, str]]:
+    """Returns all known Tamil places found in the text with index, ordered by position."""
     text_norm = _normalize(text.lower())
     matches = []
     seen: set[str] = set()
@@ -131,11 +139,24 @@ def _find_known_places(text: str) -> list[str]:
         if idx != -1 and place not in seen:
             matches.append((idx, place))
             seen.add(place)
+            
+    for alias, canonical in PLACE_ALIASES.items():
+        alias_norm = _normalize(alias.lower())
+        idx = text_norm.find(alias_norm)
+        if idx != -1 and canonical not in seen:
+            matches.append((idx, canonical))
+            seen.add(canonical)
+
     matches.sort(key=lambda x: x[0])
+    return matches
+
+def _find_known_places(text: str) -> list[str]:
+    """Returns all known Tamil places found in the text, ordered by position in text."""
+    matches = _find_known_places_with_idx(text)
     return [place for _, place in matches]
 
 
-def _find_source_by_marker(text: str, known_places: list[str]) -> str:
+def _find_source_by_marker(text: str, known_with_idx: list[tuple[int, str]]) -> str:
     """
     Find source city using positional markers.
     Tamil pattern: "CITY இருந்து" — the known place that appears just before a
@@ -143,15 +164,21 @@ def _find_source_by_marker(text: str, known_places: list[str]) -> str:
     English pattern: "from CITY".
     """
     text_norm = _normalize(text)
-    places_norm = [_normalize(p) for p in known_places]
     for marker_norm in _SOURCE_MARKERS_NORM:
         idx = text_norm.find(marker_norm)
         if idx != -1:
-            before_marker = text_norm[:idx].rstrip()
-            for place, place_norm in zip(known_places, places_norm):
-                if before_marker.endswith(place_norm):
-                    return place
+            best_place = ""
+            best_p_idx = -1
+            for p_idx, place in known_with_idx:
+                if best_p_idx < p_idx < idx:
+                    best_p_idx = p_idx
+                    best_place = place
+            if best_place:
+                return best_place
+                
     # English "from CITY"
+    known_places = [p for _, p in known_with_idx]
+    places_norm = [_normalize(p) for p in known_places]
     m = re.search(r"(?:from)\s+(\S+)", text, re.IGNORECASE)
     if m:
         candidate = _normalize(m.group(1).strip().lower())
@@ -161,7 +188,7 @@ def _find_source_by_marker(text: str, known_places: list[str]) -> str:
     return ""
 
 
-def _find_dest_by_marker(text: str, known_places: list[str]) -> str:
+def _find_dest_by_marker(text: str, known_with_idx: list[tuple[int, str]]) -> str:
     """
     Find destination city using positional markers.
     Tamil pattern: "CITY செல்ல / CITY க்கு" — the known place that appears just
@@ -169,15 +196,21 @@ def _find_dest_by_marker(text: str, known_places: list[str]) -> str:
     English pattern: "to CITY" / "towards CITY".
     """
     text_norm = _normalize(text)
-    places_norm = [_normalize(p) for p in known_places]
     for marker_norm in _DEST_MARKERS_NORM:
         idx = text_norm.find(marker_norm)
         if idx != -1:
-            before_marker = text_norm[:idx].rstrip()
-            for place, place_norm in zip(known_places, places_norm):
-                if before_marker.endswith(place_norm):
-                    return place
+            best_place = ""
+            best_p_idx = -1
+            for p_idx, place in known_with_idx:
+                if best_p_idx < p_idx < idx:
+                    best_p_idx = p_idx
+                    best_place = place
+            if best_place:
+                return best_place
+                
     # English "to CITY" or "towards CITY"
+    known_places = [p for _, p in known_with_idx]
+    places_norm = [_normalize(p) for p in known_places]
     m = re.search(r"(?:to|towards)\s+(\S+)", text, re.IGNORECASE)
     if m:
         candidate = _normalize(m.group(1).strip().lower())
@@ -193,10 +226,11 @@ def extract_entities(text: str) -> dict:
     Uses positional marker logic for Tamil and English postpositions/prepositions,
     with a positional fallback when no markers are present.
     """
-    known = _find_known_places(text)
+    known_with_idx = _find_known_places_with_idx(text)
+    known = [p for _, p in known_with_idx]
 
-    source = _find_source_by_marker(text, known)
-    destination = _find_dest_by_marker(text, known)
+    source = _find_source_by_marker(text, known_with_idx)
+    destination = _find_dest_by_marker(text, known_with_idx)
 
     # Fallback: positional assignment when markers didn't resolve both places
     if not source and not destination:

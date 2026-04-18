@@ -62,9 +62,6 @@ export default function Landing() {
         <title>பேருந்து பயணி - உங்கள் பயண வழிகாட்டி</title>
         <meta name="description" content="உங்கள் பயணத்தை பேருந்தில் தொடங்குங்கள்" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="/landing.css" />
       </Head>
 
       <nav>
@@ -131,24 +128,14 @@ export default function Landing() {
         </p>
         <div className="destination__grid">
           <div className="destination__card">
-            <img src="/img/card.jpg" alt="destination" />
+            <img
+              src="https://commons.wikimedia.org/wiki/Special:FilePath/MADURAI%20MEENAKSHI%20AMMAN%20TEMPLE%20TOWER.JPG"
+              alt="மதுரை மீனாட்சி அம்மன் கோவில்"
+            />
             <div className="destination__card__details">
               <div>
-                <h4>பத்ரிநாத் கோயிலில் புனிதமான அமைதி.</h4>
-                <p>பத்ரிநாத், உத்தராகண்ட், இந்தியா</p>
-              </div>
-              <div className="destination__ratings">
-                <span><i className="ri-star-fill"></i></span>
-                4.7
-              </div>
-            </div>
-          </div>
-          <div className="destination__card">
-            <img src="/img/card2.jpg" alt="destination" />
-            <div className="destination__card__details">
-              <div>
-                <h4>ஜெகநாத் கோயிலில் தெய்வீக மாட்சிமை.</h4>
-                <p>புரி, ஒடிசா, இந்தியா</p>
+                <h4>மதுரை மீனாட்சி அம்மன் கோவில்</h4>
+                <p>மதுரையில் உள்ள இந்த பிரசித்தி பெற்ற கோவில், திராவிடக் கட்டிடக்கலையின் சிறந்த எடுத்துக்காட்டாகும். அழகிய கோபுரங்கள் மற்றும் சிற்பங்கள் சுற்றுலா பயணிகளை கவர்கின்றன.</p>
               </div>
               <div className="destination__ratings">
                 <span><i className="ri-star-fill"></i></span>
@@ -157,15 +144,34 @@ export default function Landing() {
             </div>
           </div>
           <div className="destination__card">
-            <img src="/img/card3.webp" alt="destination" />
+            <img
+              src="https://commons.wikimedia.org/wiki/Special:FilePath/Ooty%20Tea%20Gardens.jpg"
+              alt="ஊட்டி மலைநகர்"
+            />
             <div className="destination__card__details">
               <div>
-                <h4>நீம் கரோலி கோயிலில் ஆன்மீக அமைதி.</h4>
-                <p>தேராதூன், இந்தியா</p>
+                <h4>ஊட்டி மலைநகர்</h4>
+                <p>நீலகிரி மலைகளில் அமைந்துள்ள ஊட்டி, குளிரான காலநிலை, தேயிலைத் தோட்டங்கள் மற்றும் அழகிய இயற்கைக் காட்சிகளால் பிரசித்தம். குடும்பத்துடன் செல்ல சிறந்த இடம்.</p>
               </div>
               <div className="destination__ratings">
                 <span><i className="ri-star-fill"></i></span>
-                4.5
+                4.7
+              </div>
+            </div>
+          </div>
+          <div className="destination__card">
+            <img
+              src="https://commons.wikimedia.org/wiki/Special:FilePath/View-of-Kanyakumari-from-Vivekananda-Rock-Memorial.jpg"
+              alt="கன்னியாகுமரி கடற்கரை"
+            />
+            <div className="destination__card__details">
+              <div>
+                <h4>கன்னியாகுமரி கடற்கரை</h4>
+                <p>இந்தியாவின் தெற்குத் திசை முடிவில் அமைந்துள்ள கன்னியாகுமரி, சூரிய உதயம் மற்றும் அஸ்தமனம் காண சிறந்த இடமாகும். கடல் மற்றும் கலாச்சாரம் ஒன்றிணையும் அழகான தலம்.</p>
+              </div>
+              <div className="destination__ratings">
+                <span><i className="ri-star-fill"></i></span>
+                4.6
               </div>
             </div>
           </div>
