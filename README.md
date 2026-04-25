@@ -2,7 +2,7 @@
 
 An AI-powered full-stack web application that helps users plan travel itineraries across Tamil Nadu using natural language (text or voice input in Tamil/English).
 
----
+
 
 ## Architecture
 
