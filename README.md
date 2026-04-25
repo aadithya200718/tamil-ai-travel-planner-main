@@ -6,7 +6,7 @@ An AI-powered full-stack web application that helps users plan travel itinerarie
 
 ## Architecture
 
-``
+`
 tamil-ai-travel-planner/
   frontend/        — Next.js (React) UI with voice recording, booking & TTS
   backend/         — Node.js + Express REST API + SQLite
