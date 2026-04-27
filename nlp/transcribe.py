@@ -16,10 +16,11 @@ logger = logging.getLogger(__name__)
 # Load Whisper model (base model for balance between speed and accuracy)
 # Options: tiny, base, small, medium, large
 # base = 74MB, small = 244MB
-MODEL_SIZE = os.getenv('WHISPER_MODEL_SIZE', 'base')
+MODEL_SIZE = os.getenv('WHISPER_MODEL_SIZE', 'tiny')
 logger.info(f"Loading Whisper model: {MODEL_SIZE}")
-model = whisper.load_model(MODEL_SIZE)
 logger.info("Whisper model loaded successfully")
+torch.set_num_threads(1)
+ 
 
 
 def transcribe_audio(audio_file_path, language='ta'):
