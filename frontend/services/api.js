@@ -79,11 +79,11 @@ export async function getProfile(token) {
  * @param {string} text
  * @returns {Promise<object>}
  */
-export async function sendQuery(text, mode = '') {
+export async function sendQuery(text, mode = '', language = 'ta') {
   const res = await fetch(`${BACKEND_URL}/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, mode }),
+    body: JSON.stringify({ text, mode, language }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -97,10 +97,11 @@ export async function sendQuery(text, mode = '') {
  * @param {Blob} audioBlob
  * @returns {Promise<object>}
  */
-export async function sendVoice(audioBlob, mode = '') {
+export async function sendVoice(audioBlob, mode = '', language = 'ta') {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
   formData.append('mode', mode);
+  formData.append('language', language);
 
   const res = await fetch(`${BACKEND_URL}/voice`, {
     method: 'POST',

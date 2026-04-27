@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * BookingForm component.
@@ -12,8 +13,10 @@ import { useState } from 'react';
  *   onCancel: () => void — Called when user cancels the form
  */
 export default function BookingForm({ travelOption, source, destination, onBookingComplete, onCancel }) {
+  const { ui } = useLanguage();
   const [passengers, setPassengers] = useState(1);
   const [phone, setPhone] = useState('');
+  const [travelDate, setTravelDate] = useState(() => getTodayString());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,7 +28,7 @@ export default function BookingForm({ travelOption, source, destination, onBooki
 
     // Validate phone
     if (!/^\d{10}$/.test(phone)) {
-      setError('சரியான தொலைபேசி எண்ணை உள்ளிடவும் (10 இலக்கங்கள்)');
+      setError(ui('சரியான தொலைபேசி எண்ணை உள்ளிடவும் (10 இலக்கங்கள்)'));
       return;
     }
 
@@ -49,18 +52,19 @@ export default function BookingForm({ travelOption, source, destination, onBooki
           contactPhone: phone,
           source: source || 'Unknown',
           destination: destination || 'Unknown',
+          travelDate,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'பதிவு தோல்வியடைந்தது');
+        throw new Error(ui(data.error || 'பதிவு தோல்வியடைந்தது'));
       }
 
       onBookingComplete(data);
     } catch (err) {
-      setError(err.message || 'பதிவு தோல்வியடைந்தது, மீண்டும் முயற்சிக்கவும்');
+      setError(ui(err.message || 'பதிவு தோல்வியடைந்தது'));
     } finally {
       setLoading(false);
     }
@@ -70,16 +74,16 @@ export default function BookingForm({ travelOption, source, destination, onBooki
     <div style={formContainerStyle}>
       <div style={formHeaderStyle}>
         <h3 style={{ margin: 0, fontSize: 16, color: '#2c3e50' }}>
-          🎫 பதிவு செய்யுங்கள்
+          🎫 {ui('பதிவு செய்யுங்கள்')}
         </h3>
-        <button onClick={onCancel} style={closeBtnStyle} title="Close">✕</button>
+        <button onClick={onCancel} style={closeBtnStyle} title={ui('மூடு')}>✕</button>
       </div>
 
       {/* Travel option summary */}
       <div style={summaryStyle}>
         <span style={{ fontWeight: 600 }}>{travelOption.name}</span>
         <span style={{ color: '#666', marginLeft: 8 }}>
-          ({travelOption.type}) — ₹{travelOption.price}/நபர்
+          ({ui(travelOption.type)}) - ₹{travelOption.price}/{ui('நபர்')}
         </span>
       </div>
 
@@ -87,7 +91,7 @@ export default function BookingForm({ travelOption, source, destination, onBooki
         {/* Passengers */}
         <div style={fieldStyle}>
           <label style={labelStyle} htmlFor="passengers">
-            👥 பயணிகள் எண்ணிக்கை:
+            👥 {ui('பயணிகள் எண்ணிக்கை')}:
           </label>
           <select
             id="passengers"
@@ -96,15 +100,31 @@ export default function BookingForm({ travelOption, source, destination, onBooki
             style={inputStyle}
           >
             {[1, 2, 3, 4, 5, 6].map(n => (
-              <option key={n} value={n}>{n} {n === 1 ? 'நபர்' : 'நபர்கள்'}</option>
+              <option key={n} value={n}>{n} {n === 1 ? ui('நபர்') : ui('நபர்கள்')}</option>
             ))}
           </select>
+        </div>
+
+        {/* Travel date */}
+        <div style={fieldStyle}>
+          <label style={labelStyle} htmlFor="travelDate">
+            📅 {ui('பயண தேதி')}:
+          </label>
+          <input
+            id="travelDate"
+            type="date"
+            value={travelDate}
+            onChange={(e) => setTravelDate(e.target.value)}
+            min={getTodayString()}
+            style={inputStyle}
+            required
+          />
         </div>
 
         {/* Phone */}
         <div style={fieldStyle}>
           <label style={labelStyle} htmlFor="phone">
-            📱 தொலைபேசி எண்:
+            📱 {ui('தொலைபேசி எண்')}:
           </label>
           <input
             id="phone"
@@ -120,7 +140,7 @@ export default function BookingForm({ travelOption, source, destination, onBooki
 
         {/* Total price */}
         <div style={totalStyle}>
-          <span>💰 மொத்த கட்டணம்:</span>
+          <span>💰 {ui('மொத்த கட்டணம்')}:</span>
           <span style={{ fontWeight: 700, fontSize: 18, color: '#27ae60' }}>₹{totalPrice}</span>
         </div>
 
@@ -135,11 +155,15 @@ export default function BookingForm({ travelOption, source, destination, onBooki
           disabled={loading}
           style={submitBtnStyle(loading)}
         >
-          {loading ? '⏳ பதிவு செய்கிறது...' : '✓ உறுதி செய்யுங்கள்'}
+          {loading ? `⏳ ${ui('பதிவு செய்கிறது...')}` : `✓ ${ui('உறுதி செய்யுங்கள்')}`}
         </button>
       </form>
     </div>
   );
+}
+
+function getTodayString() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────

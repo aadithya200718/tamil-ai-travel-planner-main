@@ -6,7 +6,7 @@ const axios = require('axios');
 
 const rateLimit = require('express-rate-limit');
 
-const { getDb } = require('./db');
+const { getDb, supabase } = require('./db');
 const { getTravelOptions } = require('./services/travelService');
 const { getRealTravelOptions } = require('./services/realTravelService');
 const { generateItinerary } = require('./services/itineraryService');
@@ -102,9 +102,31 @@ function extractRequestedMode(mode, transcript = '') {
 async function processQuery(transcript, requestedMode = '') {
   const db = await getDb();
 
+  // Early same-city detection at text level
+  const sameCityMatch = transcript.match(/\b(\w+)\s+(?:to|from|முதல்|இருந்து)\s+\1\b/i);
+  if (sameCityMatch) {
+    const city = sameCityMatch[1];
+    return {
+      transcript,
+      intent: 'plan_trip',
+      mode: requestedMode || 'all',
+      error: true,
+      errorMessage: `"${city}" இருந்து "${city}" க்கு பயணம் தேட முடியாது. புறப்படும் இடமும் சேரும் இடமும் வேறுபட்டதாக இருக்க வேண்டும்.`,
+      entities: { source: city, destination: city },
+      itinerary: `பிழை: புறப்படும் இடமும் சேரும் இடமும் ஒன்றாக இருக்கிறது (${city}). வேறு நகரங்களை கொடுக்கவும்.`,
+      routeResults: { totalMatches: 0, bus: [], train: [], hotels: [] },
+      travelOptions: { source: city, destination: city, options: { bus: [], train: [], flight: [] } },
+    };
+  }
+
   const nlpResult = await callNlpService(transcript);
   const { intent, entities } = nlpResult;
-  const resolvedMode = extractRequestedMode(requestedMode, transcript);
+  let resolvedMode = extractRequestedMode(requestedMode, transcript);
+
+  // Auto-detect hotel mode from NLP intent
+  if (intent === 'find_hotel' && resolvedMode === 'all') {
+    resolvedMode = 'hotel';
+  }
 
   let queryId = null;
   if (LEGACY_SCHEMA_ENABLED) {
@@ -119,6 +141,22 @@ async function processQuery(transcript, requestedMode = '') {
     mode: resolvedMode,
     entities,
   });
+
+  // Same-city error
+  if (routeLookup.error) {
+    return {
+      queryId,
+      transcript,
+      intent,
+      mode: routeLookup.requestedMode,
+      entities: routeLookup.entities,
+      error: true,
+      errorMessage: routeLookup.errorMessage,
+      itinerary: routeLookup.itinerary,
+      routeResults: routeLookup.routeResults,
+      travelOptions: routeLookup.travelOptions,
+    };
+  }
 
   if (routeLookup.shouldUseDatabase) {
     let itineraryId = null;
@@ -361,33 +399,51 @@ app.get('/recent', apiLimiter, async (req, res) => {
       return res.json([]);
     }
 
-    const db = await getDb();
-    const rows = await db.query(`
-      SELECT
-        q.id AS query_id,
-        q.transcript,
-        q.intent,
-        q.entities,
-        q.created_at,
-        i.id AS itinerary_id,
-        i.itinerary_text,
-        i.travel_options
-      FROM queries q
-      LEFT JOIN itineraries i ON i.query_id = q.id
-      ORDER BY q.created_at DESC
-      LIMIT 10
-    `);
+    const { data: queries, error: queryError } = await supabase
+      .from('queries')
+      .select('id, transcript, intent, entities, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-    const results = rows.rows.map(row => ({
-      queryId: row.query_id,
-      transcript: row.transcript,
-      intent: row.intent,
-      entities: safeParseJson(row.entities),
-      createdAt: row.created_at,
-      itineraryId: row.itinerary_id,
-      itinerary: row.itinerary_text,
-      travelOptions: safeParseJson(row.travel_options),
-    }));
+    if (queryError) throw queryError;
+
+    const queryIds = (queries || []).map(row => row.id);
+    let itinerariesByQueryId = new Map();
+
+    if (queryIds.length > 0) {
+      const { data: itineraries, error: itineraryError } = await supabase
+        .from('itineraries')
+        .select('id, query_id, itinerary_text, travel_options, created_at')
+        .in('query_id', queryIds)
+        .order('created_at', { ascending: false });
+
+      if (itineraryError) throw itineraryError;
+
+      for (const itinerary of itineraries || []) {
+        if (!itinerariesByQueryId.has(itinerary.query_id)) {
+          itinerariesByQueryId.set(itinerary.query_id, itinerary);
+        }
+      }
+    }
+
+    const results = (queries || []).map(row => {
+      const itinerary = itinerariesByQueryId.get(row.id);
+      const storedOptions = safeParseJson(itinerary?.travel_options);
+      const looksLikeRouteResults = storedOptions &&
+        (Array.isArray(storedOptions.bus) || Array.isArray(storedOptions.train) || Array.isArray(storedOptions.hotels));
+
+      return {
+        queryId: row.id,
+        transcript: row.transcript,
+        intent: row.intent,
+        entities: safeParseJson(row.entities),
+        createdAt: row.created_at,
+        itineraryId: itinerary?.id || null,
+        itinerary: itinerary?.itinerary_text || '',
+        routeResults: looksLikeRouteResults ? storedOptions : null,
+        travelOptions: looksLikeRouteResults ? null : storedOptions,
+      };
+    });
 
     res.json(results);
   } catch (err) {
@@ -571,10 +627,15 @@ app.post('/payment/create-order', apiLimiter, async (req, res) => {
       customerPhone: customerPhone || booking.contactPhone,
     });
 
+    const updatedBooking = await updateBookingPayment(bookingId, {
+      paymentId: order.orderId,
+      paymentStatus: 'pending',
+    });
+
     res.json({
       success: true,
       order,
-      booking,
+      booking: updatedBooking,
       message: 'பணம் செலுத்தும் ஆர்டர் உருவாக்கப்பட்டது',
     });
   } catch (err) {
@@ -609,6 +670,27 @@ app.post('/payment/verify', apiLimiter, async (req, res) => {
       });
     }
 
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        error: 'ரத்து செய்யப்பட்ட பதிவுக்கு கட்டணம் சரிபார்க்க முடியாது',
+      });
+    }
+
+    if (booking.paymentStatus === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'இந்த பதிவுக்கு கட்டணம் ஏற்கனவே செலுத்தப்பட்டுள்ளது',
+      });
+    }
+
+    if (booking.paymentId !== razorpayOrderId) {
+      return res.status(400).json({
+        success: false,
+        error: 'பணம் செலுத்தும் ஆர்டர் இந்த பதிவுடன் பொருந்தவில்லை',
+      });
+    }
+
     const isValid = verifyPaymentSignature({
       razorpay_order_id: razorpayOrderId,
       razorpay_payment_id: razorpayPaymentId,
@@ -624,6 +706,31 @@ app.post('/payment/verify', apiLimiter, async (req, res) => {
     }
 
     const payment = await getPaymentDetails(razorpayPaymentId);
+
+    if (payment.orderId !== razorpayOrderId) {
+      await updateBookingPayment(bookingId, { paymentStatus: 'failed' });
+      return res.status(400).json({
+        success: false,
+        error: 'Razorpay payment order பொருந்தவில்லை',
+      });
+    }
+
+    if (payment.currency !== 'INR' || Number(payment.amount) !== Number(booking.totalPrice)) {
+      await updateBookingPayment(bookingId, { paymentStatus: 'failed' });
+      return res.status(400).json({
+        success: false,
+        error: 'பணம் செலுத்திய தொகை பதிவுடன் பொருந்தவில்லை',
+      });
+    }
+
+    if (payment.status !== 'captured') {
+      await updateBookingPayment(bookingId, { paymentStatus: 'failed' });
+      return res.status(400).json({
+        success: false,
+        error: 'பணம் இன்னும் வெற்றிகரமாக பிடிக்கப்படவில்லை',
+      });
+    }
+
     const updatedBooking = await updateBookingPayment(bookingId, {
       status: 'paid',
       paymentId: razorpayPaymentId,

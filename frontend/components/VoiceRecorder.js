@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * VoiceRecorder component.
@@ -10,7 +11,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
  *   onTranscript(text: string) — called when speech is natively transcribed
  *   disabled?: boolean
  */
-export default function VoiceRecorder({ onRecorded, onTranscript, disabled = false }) {
+export default function VoiceRecorder({ onRecorded, onTranscript, disabled = false, language = 'ta' }) {
+  const { ui } = useLanguage();
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState('');
   
@@ -28,7 +30,7 @@ export default function VoiceRecorder({ onRecorded, onTranscript, disabled = fal
     if (SpeechRecognition) {
       setUseWebSpeech(true);
       const recognition = new SpeechRecognition();
-      recognition.lang = 'ta-IN'; // Tamil (India)
+        recognition.lang = language === 'en' ? 'en-IN' : 'ta-IN';
       recognition.continuous = false;
       recognition.interimResults = false;
 
@@ -42,8 +44,8 @@ export default function VoiceRecorder({ onRecorded, onTranscript, disabled = fal
       recognition.onerror = (event) => {
          console.error("Speech recognition error", event.error);
          if (event.error !== 'no-speech') {
-            setError(`குரல் பிழை: ${event.error}`);
-         }
+             setError(ui(`குரல் பிழை: ${event.error}`));
+          }
          setIsRecording(false);
       };
 
@@ -53,7 +55,7 @@ export default function VoiceRecorder({ onRecorded, onTranscript, disabled = fal
 
       recognitionRef.current = recognition;
     }
-  }, [onTranscript]);
+  }, [language, onTranscript, ui]);
 
   const startRecording = useCallback(async () => {
     setError('');
@@ -89,9 +91,9 @@ export default function VoiceRecorder({ onRecorded, onTranscript, disabled = fal
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
-      setError('Microphone access denied or not available.');
+      setError(ui('Microphone access denied or not available.'));
     }
-  }, [onRecorded, useWebSpeech]);
+  }, [onRecorded, ui, useWebSpeech]);
 
   const stopRecording = useCallback(() => {
     if (useWebSpeech && recognitionRef.current && isRecording) {
@@ -113,22 +115,22 @@ export default function VoiceRecorder({ onRecorded, onTranscript, disabled = fal
           onClick={startRecording}
           disabled={disabled}
           style={btnStyle('#e74c3c', disabled)}
-          title="Start voice recording"
+          title={ui('பேசுங்கள் (Record)')}
         >
-          <i className="ri-mic-line" style={{ marginRight: '8px' }}></i>பேசுங்கள் (Record)
+          <i className="ri-mic-line" style={{ marginRight: '8px' }}></i>{ui('பேசுங்கள் (Record)')}
         </button>
       ) : (
         <button
           onClick={stopRecording}
           style={btnStyle('#c0392b')}
-          title="Stop recording"
+          title={ui('நிறுத்து (Stop)')}
         >
-          <i className="ri-stop-circle-line" style={{ marginRight: '8px' }}></i>நிறுத்து (Stop)
+          <i className="ri-stop-circle-line" style={{ marginRight: '8px' }}></i>{ui('நிறுத்து (Stop)')}
         </button>
       )}
       {isRecording && (
         <span style={{ color: '#e74c3c', fontSize: 13, animation: 'pulse 1s infinite', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <i className="ri-record-circle-fill"></i> பதிவு நடக்கிறது…
+          <i className="ri-record-circle-fill"></i> {ui('பதிவு நடக்கிறது…')}
         </span>
       )}
       {error && <span style={{ color: '#c0392b', fontSize: 13 }}>{error}</span>}

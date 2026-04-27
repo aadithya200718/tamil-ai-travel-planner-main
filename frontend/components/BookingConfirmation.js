@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import RazorpayCheckout from './RazorpayCheckout';
 import { cancelBooking, refundBookingPayment } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function BookingConfirmation({ booking, onCancelled }) {
+  const { ui } = useLanguage();
   const [currentBooking, setCurrentBooking] = useState(booking);
   const [paymentCompleted, setPaymentCompleted] = useState(() => hasCompletedPayment(booking));
   const [cancelling, setCancelling] = useState(false);
@@ -17,10 +19,10 @@ export default function BookingConfirmation({ booking, onCancelled }) {
 
   const userDetails = useMemo(
     () => ({
-      customerName: localStorage.getItem('userName') || 'பயனர்',
-      customerEmail: localStorage.getItem('userEmail') || '',
-    }),
-    []
+        customerName: localStorage.getItem('userName') || ui('பயனர்'),
+        customerEmail: localStorage.getItem('userEmail') || '',
+      }),
+    [ui]
   );
 
   const isCancelled = currentBooking.status === 'cancelled';
@@ -30,7 +32,7 @@ export default function BookingConfirmation({ booking, onCancelled }) {
   const canRefund = paymentCompleted && isCancelled && isPaid && !isRefunded && refundAmount > 0;
 
   async function handleCancel() {
-    if (!window.confirm('இந்த பதிவை ரத்து செய்ய விரும்புகிறீர்களா?')) return;
+    if (!window.confirm(ui('இந்த பதிவை ரத்து செய்ய விரும்புகிறீர்களா?'))) return;
 
     setCancelling(true);
     setError('');
@@ -42,10 +44,10 @@ export default function BookingConfirmation({ booking, onCancelled }) {
         setCurrentBooking(data.booking);
         setPaymentCompleted(hasCompletedPayment(data.booking));
       }
-      setMessage(data.message || 'பதிவு ரத்து செய்யப்பட்டது');
+      setMessage(ui(data.message || 'பதிவு ரத்து செய்யப்பட்டது'));
       onCancelled?.(data);
     } catch (err) {
-      setError(err.message || 'ரத்து செய்ய இயலவில்லை');
+      setError(ui(err.message || 'ரத்து செய்ய இயலவில்லை'));
     } finally {
       setCancelling(false);
     }
@@ -68,9 +70,9 @@ export default function BookingConfirmation({ booking, onCancelled }) {
         setPaymentCompleted(hasCompletedPayment(data.booking));
       }
 
-      setMessage(data.message || 'பணம் திருப்பி அனுப்பும் செயல்முறை தொடங்கப்பட்டது');
+      setMessage(ui(data.message || 'பணம் திருப்பி அனுப்பும் செயல்முறை தொடங்கப்பட்டது'));
     } catch (err) {
-      setError(err.message || 'Refund தொடங்க முடியவில்லை');
+      setError(ui(err.message || 'Refund தொடங்க முடியவில்லை'));
     } finally {
       setRefunding(false);
     }
@@ -83,12 +85,12 @@ export default function BookingConfirmation({ booking, onCancelled }) {
     } else {
       setPaymentCompleted(true);
     }
-    setMessage(paymentData.message || 'பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது! 🎉');
+    setMessage(ui(paymentData.message || 'பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது! 🎉'));
     setError('');
   }
 
   function handlePaymentFailure(err) {
-    setError(err.message || 'பணம் செலுத்துதல் தோல்வியடைந்தது');
+    setError(ui(err.message || 'பணம் செலுத்துதல் தோல்வியடைந்தது'));
   }
 
   return (
@@ -99,27 +101,28 @@ export default function BookingConfirmation({ booking, onCancelled }) {
         </span>
         <span style={{ fontWeight: 700, fontSize: 17 }}>
           {isRefunded
-            ? 'Refund செயல்முறை தொடங்கப்பட்டது'
+            ? ui('Refund செயல்முறை தொடங்கப்பட்டது')
             : isCancelled
-              ? 'பதிவு ரத்து செய்யப்பட்டது'
+              ? ui('பதிவு ரத்து செய்யப்பட்டது')
               : paymentCompleted
-                ? 'பணம் செலுத்துதல் முடிந்தது'
-                : 'பதிவு உருவாக்கப்பட்டது'}
+                ? ui('பணம் செலுத்துதல் முடிந்தது')
+                : ui('பதிவு உருவாக்கப்பட்டது')}
         </span>
       </div>
 
       {paymentCompleted && (
         <div style={detailsGridStyle}>
-          <DetailRow label="பதிவு எண்" value={currentBooking.bookingId} highlight />
-          <DetailRow label="PNR எண்" value={currentBooking.pnr} highlight />
-          <DetailRow label="பயணம்" value={`${currentBooking.travelName} (${currentBooking.travelType})`} />
-          <DetailRow label="வழித்தடம்" value={`${currentBooking.source} → ${currentBooking.destination}`} />
-          <DetailRow label="பயணிகள்" value={`${currentBooking.passengers} நபர்`} />
-          <DetailRow label="மொத்த கட்டணம்" value={`₹${currentBooking.totalPrice}`} />
-          <DetailRow label="தொலைபேசி" value={currentBooking.contactPhone} />
+          <DetailRow label={ui('பதிவு எண்')} value={currentBooking.bookingId} highlight />
+          <DetailRow label={ui('PNR எண்')} value={currentBooking.pnr} highlight />
+          <DetailRow label={ui('பயணம்')} value={`${ui(currentBooking.travelName)} (${ui(currentBooking.travelType)})`} />
+          <DetailRow label={ui('வழித்தடம்')} value={`${ui(currentBooking.source)} → ${ui(currentBooking.destination)}`} />
+          {currentBooking.travelDate && <DetailRow label={ui('பயண தேதி')} value={currentBooking.travelDate} />}
+          <DetailRow label={ui('பயணிகள்')} value={`${currentBooking.passengers} ${ui('நபர்')}`} />
+          <DetailRow label={ui('மொத்த கட்டணம்')} value={`₹${currentBooking.totalPrice}`} />
+          <DetailRow label={ui('தொலைபேசி')} value={currentBooking.contactPhone} />
           <DetailRow
-            label="கட்டண நிலை"
-            value={paymentStatusLabel(currentBooking.paymentStatus, currentBooking.status)}
+            label={ui('கட்டண நிலை')}
+            value={ui(paymentStatusLabel(currentBooking.paymentStatus, currentBooking.status))}
             valueColor={paymentStatusColor(currentBooking.paymentStatus, currentBooking.status)}
           />
           {currentBooking.paymentId && <DetailRow label="Payment ID" value={currentBooking.paymentId} />}
@@ -149,40 +152,40 @@ export default function BookingConfirmation({ booking, onCancelled }) {
       )}
 
       {paymentCompleted && !isCancelled && !message && (
-        <div style={successStyle}>✅ பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது! 🎉</div>
+        <div style={successStyle}>✅ {ui('பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது! 🎉')}</div>
       )}
 
       {paymentCompleted && isCancelled && (
         <div style={refundInfoStyle}>
           <p style={{ margin: '0 0 4px', fontWeight: 600 }}>
-            {refundAmount > 0 ? `திருப்பி தொகை: ₹${refundAmount}` : 'திருப்பி தொகை இல்லை'}
+            {refundAmount > 0 ? `${ui('திருப்பி தொகை')}: ₹${refundAmount}` : ui('திருப்பி தொகை இல்லை')}
           </p>
           <p style={{ margin: 0, fontSize: 13, color: '#555' }}>
             {isRefunded
-              ? 'Refund கோரிக்கை அனுப்பப்பட்டுள்ளது. Razorpay நிலையை சரிபார்க்கவும்.'
+              ? ui('Refund கோரிக்கை அனுப்பப்பட்டுள்ளது. Razorpay நிலையை சரிபார்க்கவும்.')
               : isPaid
-                ? 'பணம் செலுத்திய பதிவுகளுக்கு மட்டுமே refund செயல்முறை கிடைக்கும்.'
-                : 'இந்த பதிவு இன்னும் செலுத்தப்படாததால் refund தேவையில்லை.'}
+                ? ui('பணம் செலுத்திய பதிவுகளுக்கு மட்டுமே refund செயல்முறை கிடைக்கும்.')
+                : ui('இந்த பதிவு இன்னும் செலுத்தப்படாததால் refund தேவையில்லை.')}
           </p>
         </div>
       )}
 
       {canRefund && (
         <button onClick={handleRefund} disabled={refunding} style={refundBtnStyle(refunding)}>
-          {refunding ? '⏳ Refund தொடங்குகிறது...' : '💸 Refund தொடங்கு'}
+          {refunding ? `⏳ ${ui('Refund தொடங்குகிறது...')}` : `💸 ${ui('Refund தொடங்கு')}`}
         </button>
       )}
 
       {paymentCompleted && !isCancelled && (
         <div style={{ marginTop: 16 }}>
           <div style={policyStyle}>
-            <strong>ரத்து விதிமுறை:</strong><br />
-            • 1 மணி நேரத்திற்குள் — 100% பணம் திருப்பி<br />
-            • 1-24 மணி நேரம் — 50% பணம் திருப்பி<br />
-            • 24 மணி நேரத்திற்கு மேல் — பணம் திருப்பி இல்லை
+            <strong>{ui('ரத்து விதிமுறை:')}</strong><br />
+            {ui('• 1 மணி நேரத்திற்குள் — 100% பணம் திருப்பி')}<br />
+            {ui('• 1-24 மணி நேரம் — 50% பணம் திருப்பி')}<br />
+            {ui('• 24 மணி நேரத்திற்கு மேல் — பணம் திருப்பி இல்லை')}
           </div>
           <button onClick={handleCancel} disabled={cancelling} style={cancelBtnStyle(cancelling)}>
-            {cancelling ? '⏳ ரத்து செய்கிறது...' : '✖ ரத்து செய்'}
+            {cancelling ? `⏳ ${ui('ரத்து செய்கிறது...')}` : `✖ ${ui('ரத்து செய்')}`}
           </button>
         </div>
       )}

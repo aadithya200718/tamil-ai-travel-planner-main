@@ -25,6 +25,11 @@ INTENT_KEYWORDS = {
         "இடங்கள்", "places", "tourist", "சுற்றுலா இடங்கள்", "பார்க்க",
         "attractions", "sight", "மணிமண்டபம்", "கோவில்",
     ],
+    "find_hotel": [
+        "hotel", "hotels", "விடுதி", "ஹோட்டல்", "தங்கும்", "தங்க",
+        "lodge", "stay", "room", "accommodation", "resort", "ரிசார்ட்",
+        "ஹோம்ஸ்டே", "homestay", "தங்கும் விடுதி",
+    ],
 }
 
 # ─── Entity extraction ────────────────────────────────────────────────────────
@@ -51,6 +56,32 @@ TAMIL_PLACES = [
     "Dindigul", "திண்டுக்கல்",
     "Cuddalore", "கடலூர்",
     "Pondicherry", "Puducherry", "புதுச்சேரி",
+    # South India - new
+    "Tirupati", "திருப்பதி",
+    "Tiruvannamalai", "திருவண்ணாமலை",
+    "Kanchipuram", "காஞ்சிபுரம்",
+    "Namakkal", "நாமக்கல்",
+    "Karur", "கரூர்",
+    "Theni", "தேனி",
+    "Virudhunagar", "விருதுநகர்",
+    "Sivagangai", "சிவகங்கை",
+    "Pudukkottai", "புதுக்கோட்டை",
+    "Perambalur", "பெரம்பலூர்",
+    "Dharmapuri", "தர்மபுரி",
+    # North India
+    "Bangalore", "Bengaluru", "பெங்களூர்",
+    "Hyderabad", "ஹைதராபாத்",
+    "Vizag", "Visakhapatnam", "விசாகப்பட்டினம்",
+    "Vijayawada", "விஜயவாடா",
+    "Mysore", "Mysuru", "மைசூர்",
+    "Goa", "கோவா",
+    "Mumbai", "மும்பை",
+    "Pune", "புனே",
+    "Kochi", "Cochin", "கொச்சி",
+    "Thiruvananthapuram", "Trivandrum", "திருவனந்தபுரம்",
+    "Mangalore", "Mangaluru", "மங்களூர்",
+    "Delhi", "டெல்லி",
+    "Kolkata", "கொல்கத்தா",
 ]
 
 PLACE_ALIASES = {

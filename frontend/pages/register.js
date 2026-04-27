@@ -2,9 +2,11 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { registerUser } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Register() {
   const router = useRouter();
+  const { ui } = useLanguage();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,8 +74,8 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>புதிய கணக்கு — தமிழ் AI பயண திட்டமிடுபவர்</title>
-        <meta name="description" content="தமிழ் AI பயண திட்டமிடுபவரில் புதிய கணக்கு உருவாக்குங்கள்" />
+        <title>{ui('புதிய கணக்கு')} - {ui('தமிழ் AI பயண திட்டமிடுபவர்')}</title>
+        <meta name="description" content={ui('தமிழ் AI பயண திட்டமிடுபவரில் புதிய கணக்கு உருவாக்குங்கள்')} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -86,14 +88,14 @@ export default function Register() {
         <div style={cardContainerStyle}>
           {/* Brand */}
           <div style={brandStyle}>
-            <h1 style={brandTitleStyle}>தமிழ் AI பயண திட்டமிடுபவர்</h1>
-            <p style={brandSubStyle}>உங்கள் கணக்கை உருவாக்கி பயண திட்டங்களை தொடங்குங்கள்</p>
+            <h1 style={brandTitleStyle}>{ui('தமிழ் AI பயண திட்டமிடுபவர்')}</h1>
+            <p style={brandSubStyle}>{ui('உங்கள் கணக்கை உருவாக்கி பயண திட்டங்களை தொடங்குங்கள்')}</p>
           </div>
 
           {/* Register Card */}
           <div style={cardStyle}>
-            <h2 style={cardTitleStyle}>புதிய கணக்கு உருவாக்கு</h2>
-            <p style={cardDescStyle}>உங்கள் பயணத்தை இன்றே தொடங்குங்கள்</p>
+            <h2 style={cardTitleStyle}>{ui('புதிய கணக்கு உருவாக்கு')}</h2>
+            <p style={cardDescStyle}>{ui('உங்கள் பயணத்தை இன்றே தொடங்குங்கள்')}</p>
 
             {/* Step Indicator */}
             <div style={stepIndicatorStyle}>
@@ -106,8 +108,8 @@ export default function Register() {
               </div>
             </div>
             <div style={stepLabelsStyle}>
-              <span style={stepLabelStyle(step >= 1)}>தனிப்பட்ட தகவல்</span>
-              <span style={stepLabelStyle(step >= 2)}>கடவுச்சொல்</span>
+              <span style={stepLabelStyle(step >= 1)}>{ui('தனிப்பட்ட தகவல்')}</span>
+              <span style={stepLabelStyle(step >= 2)}>{ui('கடவுச்சொல்')}</span>
             </div>
 
             {/* Step 1: Personal Info */}
@@ -115,13 +117,13 @@ export default function Register() {
               <form onSubmit={handleNext} style={{ marginTop: 20 }}>
                 {/* Name */}
                 <div style={fieldGroupStyle}>
-                  <label style={labelStyle}><i className="ri-user-line" style={{ marginRight: '8px' }}></i>பெயர்</label>
+                  <label style={labelStyle}><i className="ri-user-line" style={{ marginRight: '8px' }}></i>{ui('பெயர்')}</label>
                   <input
                     id="register-name"
                     type="text"
                     value={form.name}
                     onChange={e => updateField('name', e.target.value)}
-                    placeholder="உங்கள் முழுப் பெயர்"
+                    placeholder={ui('உங்கள் முழுப் பெயர்')}
                     style={inputStyle}
                     autoComplete="name"
                     autoFocus
@@ -130,13 +132,13 @@ export default function Register() {
 
                 {/* Email */}
                 <div style={fieldGroupStyle}>
-                  <label style={labelStyle}><i className="ri-mail-line" style={{ marginRight: '8px' }}></i>மின்னஞ்சல்</label>
+                  <label style={labelStyle}><i className="ri-mail-line" style={{ marginRight: '8px' }}></i>{ui('மின்னஞ்சல்')}</label>
                   <input
                     id="register-email"
                     type="email"
                     value={form.email}
                     onChange={e => updateField('email', e.target.value)}
-                    placeholder="உதாரணம்@email.com"
+                    placeholder={ui('உதாரணம்@email.com')}
                     style={inputStyle}
                     autoComplete="email"
                   />
@@ -144,7 +146,7 @@ export default function Register() {
 
                 {/* Phone */}
                 <div style={fieldGroupStyle}>
-                  <label style={labelStyle}><i className="ri-phone-line" style={{ marginRight: '8px' }}></i>தொலைபேசி <span style={{ color: '#737373', fontSize: 12, fontWeight: 400 }}>(விருப்பம்)</span></label>
+                  <label style={labelStyle}><i className="ri-phone-line" style={{ marginRight: '8px' }}></i>{ui('தொலைபேசி')} <span style={{ color: '#737373', fontSize: 12, fontWeight: 400 }}>{ui('(விருப்பம்)')}</span></label>
                   <input
                     id="register-phone"
                     type="tel"
@@ -155,14 +157,14 @@ export default function Register() {
                     autoComplete="tel"
                   />
                   <div style={{ fontSize: 12, color: '#737373', marginTop: 6 }}>
-                    கடவுச்சொல் மறந்தால் OTP அனுப்ப இந்த எண் பயன்படும்
+                    {ui('கடவுச்சொல் மறந்தால் OTP அனுப்ப இந்த எண் பயன்படும்')}
                   </div>
                 </div>
 
-                {error && <div style={errorStyle}><i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{error}</div>}
+                {error && <div style={errorStyle}><i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{ui(error)}</div>}
 
                 <button id="register-next" type="submit" style={submitBtnStyle(false)}>
-                  அடுத்து →
+                  {ui('அடுத்து')} →
                 </button>
               </form>
             )}
@@ -172,21 +174,21 @@ export default function Register() {
               <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
                 {/* Summary */}
                 <div style={summaryBoxStyle}>
-                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>பதிவு செய்யப்படுகிறது:</div>
+                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{ui('பதிவு செய்யப்படுகிறது:')}</div>
                   <div style={{ fontSize: 15, color: '#fff', fontWeight: 600 }}>{form.name}</div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{form.email}</div>
                 </div>
 
                 {/* Password */}
                 <div style={fieldGroupStyle}>
-                  <label style={labelStyle}><i className="ri-lock-line" style={{ marginRight: '8px' }}></i>கடவுச்சொல்</label>
+                  <label style={labelStyle}><i className="ri-lock-line" style={{ marginRight: '8px' }}></i>{ui('கடவுச்சொல்')}</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       id="register-password"
                       type={showPassword ? 'text' : 'password'}
                       value={form.password}
                       onChange={e => updateField('password', e.target.value)}
-                      placeholder="குறைந்தது 6 எழுத்துகள்"
+                        placeholder={ui('குறைந்தது 6 எழுத்துகள்')}
                       style={{ ...inputStyle, paddingRight: 48 }}
                       autoComplete="new-password"
                       autoFocus
@@ -208,7 +210,7 @@ export default function Register() {
                         <div style={strengthBarFillStyle(passwordStrength)}></div>
                       </div>
                       <div style={{ fontSize: 12, color: strengthColor(passwordStrength), marginTop: 4 }}>
-                        {strengthLabel(passwordStrength)}
+                        {ui(strengthLabel(passwordStrength))}
                       </div>
                     </div>
                   )}
@@ -216,30 +218,30 @@ export default function Register() {
 
                 {/* Confirm Password */}
                 <div style={fieldGroupStyle}>
-                  <label style={labelStyle}><i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>கடவுச்சொல் உறுதிப்படுத்தல்</label>
+                  <label style={labelStyle}><i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>{ui('கடவுச்சொல் உறுதிப்படுத்தல்')}</label>
                   <input
                     id="register-confirm-password"
                     type={showPassword ? 'text' : 'password'}
                     value={form.confirmPassword}
                     onChange={e => updateField('confirmPassword', e.target.value)}
-                    placeholder="கடவுச்சொல்லை மீண்டும் உள்ளிடவும்"
+                    placeholder={ui('கடவுச்சொல்லை மீண்டும் உள்ளிடவும்')}
                     style={inputStyle}
                     autoComplete="new-password"
                     disabled={loading}
                   />
                   {form.confirmPassword && form.password !== form.confirmPassword && (
                     <div style={{ fontSize: 12, color: '#ff6b6b', marginTop: 4 }}>
-                      <i className="ri-close-circle-line" style={{ marginRight: '4px' }}></i>கடவுச்சொற்கள் பொருந்தவில்லை
+                      <i className="ri-close-circle-line" style={{ marginRight: '4px' }}></i>{ui('கடவுச்சொற்கள் பொருந்தவில்லை')}
                     </div>
                   )}
                   {form.confirmPassword && form.password === form.confirmPassword && (
                     <div style={{ fontSize: 12, color: '#2ecc71', marginTop: 4 }}>
-                      <i className="ri-checkbox-circle-line" style={{ marginRight: '4px' }}></i>கடவுச்சொற்கள் பொருந்துகின்றன
+                      <i className="ri-checkbox-circle-line" style={{ marginRight: '4px' }}></i>{ui('கடவுச்சொற்கள் பொருந்துகின்றன')}
                     </div>
                   )}
                 </div>
 
-                {error && <div style={errorStyle}><i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{error}</div>}
+                {error && <div style={errorStyle}><i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>{ui(error)}</div>}
 
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
@@ -248,7 +250,7 @@ export default function Register() {
                     style={backBtnStyle}
                     disabled={loading}
                   >
-                    <i className="ri-arrow-left-line" style={{ marginRight: '8px' }}></i>பின்
+                    <i className="ri-arrow-left-line" style={{ marginRight: '8px' }}></i>{ui('பின்')}
                   </button>
                   <button
                     id="register-submit"
@@ -259,12 +261,12 @@ export default function Register() {
                     {loading ? (
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                         <span style={spinnerStyle}></span>
-                        பதிவு செய்கிறது…
+                        {ui('பதிவு செய்கிறது…')}
                       </span>
                     ) : (
                       <>
                         <i className="ri-user-add-line" style={{ marginRight: '8px' }}></i>
-                        கணக்கு உருவாக்கு
+                        {ui('கணக்கு உருவாக்கு')}
                       </>
                     )}
                   </button>
@@ -275,13 +277,13 @@ export default function Register() {
             {/* Login link */}
             <div style={linkSectionStyle}>
               <p style={{ margin: 0, color: '#8e99a4', fontSize: 14 }}>
-                ஏற்கனவே கணக்கு உள்ளதா?{' '}
+                {ui('ஏற்கனவே கணக்கு உள்ளதா?')}{' '}
                 <a
                   href="/login"
                   onClick={e => { e.preventDefault(); router.push('/login'); }}
                   style={linkStyle}
                 >
-                  உள்நுழைக →
+                  {ui('உள்நுழைக')} →
                 </a>
               </p>
             </div>
@@ -289,7 +291,7 @@ export default function Register() {
 
           {/* Footer */}
           <p style={footerStyle}>
-            © 2026 தமிழ் AI பயண திட்டமிடுபவர் — அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை
+            © 2026 {ui('தமிழ் AI பயண திட்டமிடுபவர்')}
           </p>
         </div>
       </div>

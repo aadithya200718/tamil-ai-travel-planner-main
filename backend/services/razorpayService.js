@@ -99,6 +99,7 @@ async function getPaymentDetails(paymentId) {
     const payment = await razorpay.payments.fetch(paymentId);
     return {
       id: payment.id,
+      orderId: payment.order_id,
       amount: payment.amount / 100, // Convert paise to rupees
       currency: payment.currency,
       status: payment.status,
