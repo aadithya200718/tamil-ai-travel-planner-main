@@ -2,9 +2,11 @@
  * Handles booking creation, retrieval, payment state updates, and cancellation rules.
  */
 
-const { getDb } = require('../db');
-
 const BOOKING_TABLES = ['bus_bookings', 'train_bookings', 'flight_bookings', 'hotel_bookings'];
+
+function getSupabase() {
+  return require('../db').supabase;
+}
 
 function generatePnr() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -29,13 +31,18 @@ function getTableName(travelType) {
 }
 
 async function getNextBookingId() {
-  const db = await getDb();
+  const supabase = getSupabase();
   let maxNum = 1000;
 
   for (const table of BOOKING_TABLES) {
-    const res = await db.query(`SELECT booking_id FROM ${table} ORDER BY id DESC LIMIT 1`);
-    if (res.rows.length > 0) {
-      const num = parseInt(String(res.rows[0].booking_id || '').replace('TN', ''), 10);
+    const { data } = await supabase
+      .from(table)
+      .select('booking_id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const num = parseInt(String(data[0].booking_id || '').replace('TN', ''), 10);
       if (!Number.isNaN(num) && num > maxNum) {
         maxNum = num;
       }
@@ -47,6 +54,23 @@ async function getNextBookingId() {
 
 function validatePhone(phone) {
   return /^\d{10}$/.test(String(phone || ''));
+}
+
+function parseDateOnly(value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function mapBookingRow(row, travelType) {
@@ -76,14 +100,19 @@ function mapBookingRow(row, travelType) {
   };
 }
 
-async function findBookingRecord(bookingId, existingDb = null) {
-  const db = existingDb || (await getDb());
+async function findBookingRecord(bookingId) {
+  const supabase = getSupabase();
 
   for (const table of BOOKING_TABLES) {
-    const res = await db.query(`SELECT * FROM ${table} WHERE booking_id = $1`, [bookingId]);
-    if (res.rows.length > 0) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .eq('booking_id', bookingId)
+      .limit(1);
+
+    if (!error && data && data.length > 0) {
       return {
-        row: res.rows[0],
+        row: data[0],
         tableName: table,
         travelType: table.replace('_bookings', ''),
       };
@@ -104,7 +133,7 @@ async function createBooking({ travelOption, passengers, contactPhone, source, d
     throw new Error('சரியான தொலைபேசி எண்ணை உள்ளிடவும் (10 இலக்கங்கள்)');
   }
 
-  const db = await getDb();
+  const supabase = getSupabase();
   const bookingId = await getNextBookingId();
   const pnr = generatePnr();
   const pricePerPerson = travelOption.price;
@@ -117,32 +146,29 @@ async function createBooking({ travelOption, passengers, contactPhone, source, d
   const referenceNumber = travelOption.referenceNumber || '';
   const tableName = getTableName(travelType);
 
-  await db.query(
-    `
-      INSERT INTO ${tableName}
-        (booking_id, user_id, route_id, route_mode, travel_name, service_type, reference_number,
-         source, destination, travel_date, passengers, price_per_person, total_price,
-         contact_phone, pnr, status, payment_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'confirmed', 'pending')
-    `,
-    [
-      bookingId,
-      'guest',
-      routeId,
-      routeMode,
-      travelName,
-      serviceType,
-      referenceNumber,
-      source || 'Unknown',
-      destination || 'Unknown',
-      travelDate || '',
+  const { error } = await supabase
+    .from(tableName)
+    .insert({
+      booking_id: bookingId,
+      user_id: 'guest',
+      route_id: routeId,
+      route_mode: routeMode,
+      travel_name: travelName,
+      service_type: serviceType,
+      reference_number: referenceNumber,
+      source: source || 'Unknown',
+      destination: destination || 'Unknown',
+      travel_date: travelDate || '',
       passengers,
-      pricePerPerson,
-      totalPrice,
-      contactPhone,
+      price_per_person: pricePerPerson,
+      total_price: totalPrice,
+      contact_phone: contactPhone,
       pnr,
-    ]
-  );
+      status: 'confirmed',
+      payment_status: 'pending',
+    });
+
+  if (error) throw new Error(`Booking creation failed: ${error.message}`);
 
   console.log(`[bookingService] Created booking ${bookingId} in ${tableName} (PNR: ${pnr})`);
 
@@ -178,54 +204,38 @@ async function getBooking(bookingId) {
 }
 
 async function updateBookingPayment(bookingId, { status, paymentId, paymentStatus, refundId, refundAmount }) {
-  const db = await getDb();
-  const found = await findBookingRecord(bookingId, db);
+  const supabase = getSupabase();
+  const found = await findBookingRecord(bookingId);
 
   if (!found) {
     throw new Error('பதிவு கிடைக்கவில்லை');
   }
 
-  const updates = [];
-  const values = [];
+  const updates = {};
+  if (status) updates.status = status;
+  if (typeof paymentId !== 'undefined') updates.payment_id = paymentId || null;
+  if (typeof paymentStatus !== 'undefined') updates.payment_status = paymentStatus;
+  if (typeof refundId !== 'undefined') updates.refund_id = refundId || null;
+  if (typeof refundAmount !== 'undefined') updates.refund_amount = refundAmount;
 
-  if (status) {
-    values.push(status);
-    updates.push(`status = $${values.length}`);
-  }
-  if (typeof paymentId !== 'undefined') {
-    values.push(paymentId || null);
-    updates.push(`payment_id = $${values.length}`);
-  }
-  if (typeof paymentStatus !== 'undefined') {
-    values.push(paymentStatus);
-    updates.push(`payment_status = $${values.length}`);
-  }
-  if (typeof refundId !== 'undefined') {
-    values.push(refundId || null);
-    updates.push(`refund_id = $${values.length}`);
-  }
-  if (typeof refundAmount !== 'undefined') {
-    values.push(refundAmount);
-    updates.push(`refund_amount = $${values.length}`);
-  }
-
-  if (updates.length === 0) {
+  if (Object.keys(updates).length === 0) {
     return mapBookingRow(found.row, found.travelType);
   }
 
-  values.push(bookingId);
-  await db.query(
-    `UPDATE ${found.tableName} SET ${updates.join(', ')} WHERE booking_id = $${values.length}`,
-    values
-  );
+  const { error } = await supabase
+    .from(found.tableName)
+    .update(updates)
+    .eq('booking_id', bookingId);
 
-  const refreshed = await findBookingRecord(bookingId, db);
+  if (error) throw new Error(`Booking update failed: ${error.message}`);
+
+  const refreshed = await findBookingRecord(bookingId);
   return mapBookingRow(refreshed.row, refreshed.travelType);
 }
 
 async function cancelBooking(bookingId) {
-  const db = await getDb();
-  const found = await findBookingRecord(bookingId, db);
+  const supabase = getSupabase();
+  const found = await findBookingRecord(bookingId);
 
   if (!found) {
     return { success: false, message: 'பதிவு கிடைக்கவில்லை' };
@@ -237,8 +247,8 @@ async function cancelBooking(bookingId) {
   }
 
   if (row.travel_date) {
-    const travelDate = new Date(row.travel_date);
-    if (!Number.isNaN(travelDate.getTime()) && travelDate < new Date()) {
+    const travelDate = parseDateOnly(row.travel_date) || new Date(row.travel_date);
+    if (!Number.isNaN(travelDate.getTime()) && travelDate < startOfToday()) {
       return { success: false, message: 'பயண தேதி கடந்துவிட்டதால் ரத்து செய்ய இயலாது' };
     }
   }
@@ -248,8 +258,8 @@ async function cancelBooking(bookingId) {
   const hoursSinceBooking = (now - bookingTime) / (1000 * 60 * 60);
   const isPaid = row.payment_status === 'paid';
 
-  let refundPercent = 0;
   let refundAmount = 0;
+  let refundPercent = 0;
   let message = 'பதிவு ரத்து செய்யப்பட்டது';
 
   if (isPaid) {
@@ -268,16 +278,18 @@ async function cancelBooking(bookingId) {
     message = 'பதிவு ரத்து செய்யப்பட்டது. பணம் இன்னும் செலுத்தப்படாததால் திருப்பி தொகை இல்லை';
   }
 
-  await db.query(
-    `
-      UPDATE ${tableName}
-      SET status = 'cancelled', refund_amount = $1, cancelled_at = CURRENT_TIMESTAMP
-      WHERE booking_id = $2
-    `,
-    [refundAmount, bookingId]
-  );
+  const { error } = await supabase
+    .from(tableName)
+    .update({
+      status: 'cancelled',
+      refund_amount: refundAmount,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq('booking_id', bookingId);
 
-  const updated = await findBookingRecord(bookingId, db);
+  if (error) throw new Error(`Cancel failed: ${error.message}`);
+
+  const updated = await findBookingRecord(bookingId);
 
   return {
     success: true,
@@ -290,20 +302,25 @@ async function cancelBooking(bookingId) {
 }
 
 async function getAllBookings() {
-  const db = await getDb();
-  const query = `
-    SELECT *, 'bus' AS travel_type FROM bus_bookings
-    UNION ALL
-    SELECT *, 'train' AS travel_type FROM train_bookings
-    UNION ALL
-    SELECT *, 'flight' AS travel_type FROM flight_bookings
-    UNION ALL
-    SELECT *, 'hotel' AS travel_type FROM hotel_bookings
-    ORDER BY created_at DESC
-  `;
+  const supabase = getSupabase();
+  const allBookings = [];
 
-  const res = await db.query(query);
-  return res.rows.map((row) => mapBookingRow(row, row.travel_type));
+  for (const table of BOOKING_TABLES) {
+    const travelType = table.replace('_bookings', '');
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      for (const row of data) {
+        allBookings.push(mapBookingRow(row, travelType));
+      }
+    }
+  }
+
+  allBookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return allBookings;
 }
 
 module.exports = {

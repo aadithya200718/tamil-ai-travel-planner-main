@@ -6,9 +6,11 @@ import {
   sendForgotPasswordOtp,
   resetPasswordWithOtp,
 } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Login() {
   const router = useRouter();
+  const { ui } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -152,10 +154,10 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>உள்நுழைவு — தமிழ் AI பயண திட்டமிடுபவர்</title>
+        <title>{ui('உள்நுழைவு')} - {ui('தமிழ் AI பயண திட்டமிடுபவர்')}</title>
         <meta
           name="description"
-          content="தமிழ் AI பயண திட்டமிடுபவரில் உள்நுழைக"
+          content={ui('தமிழ் AI பயண திட்டமிடுபவரில் உள்நுழைக')}
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -167,26 +169,26 @@ export default function Login() {
 
         <div style={cardContainerStyle}>
           <div style={brandStyle}>
-            <h1 style={brandTitleStyle}>தமிழ் AI பயண திட்டமிடுபவர்</h1>
-            <p style={brandSubStyle}>பாதுகாப்பாக உள்நுழைந்து உங்கள் பயணங்களை தொடருங்கள்</p>
+            <h1 style={brandTitleStyle}>{ui('தமிழ் AI பயண திட்டமிடுபவர்')}</h1>
+            <p style={brandSubStyle}>{ui('பாதுகாப்பாக உள்நுழைந்து உங்கள் பயணங்களை தொடருங்கள்')}</p>
           </div>
 
           <div style={cardStyle}>
-            <h2 style={cardTitleStyle}>உள்நுழைவு</h2>
-            <p style={cardDescStyle}>உங்கள் கணக்கில் உள்நுழையுங்கள்</p>
+            <h2 style={cardTitleStyle}>{ui('உள்நுழைவு')}</h2>
+            <p style={cardDescStyle}>{ui('உங்கள் கணக்கில் உள்நுழையுங்கள்')}</p>
 
             <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
               <div style={fieldGroupStyle}>
                 <label style={labelStyle}>
                   <i className="ri-mail-line" style={{ marginRight: '8px' }}></i>
-                  மின்னஞ்சல்
+                  {ui('மின்னஞ்சல்')}
                 </label>
                 <input
                   id="login-email"
                   type="email"
                   value={form.email}
                   onChange={(e) => updateField('email', e.target.value)}
-                  placeholder="உதாரணம்@email.com"
+                  placeholder={ui('உதாரணம்@email.com')}
                   style={inputStyle}
                   autoComplete="email"
                   disabled={loading}
@@ -196,7 +198,7 @@ export default function Login() {
               <div style={fieldGroupStyle}>
                 <label style={labelStyle}>
                   <i className="ri-lock-line" style={{ marginRight: '8px' }}></i>
-                  கடவுச்சொல்
+                  {ui('கடவுச்சொல்')}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -204,7 +206,7 @@ export default function Login() {
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
                     onChange={(e) => updateField('password', e.target.value)}
-                    placeholder="குறைந்தது 6 எழுத்துகள்"
+                      placeholder={ui('குறைந்தது 6 எழுத்துகள்')}
                     style={{ ...inputStyle, paddingRight: 48 }}
                     autoComplete="current-password"
                     disabled={loading}
@@ -229,21 +231,21 @@ export default function Login() {
                   onClick={toggleForgotPassword}
                   style={textButtonStyle}
                 >
-                  கடவுச்சொல்லை மறந்துவிட்டீர்களா?
+                  {ui('கடவுச்சொல்லை மறந்துவிட்டீர்களா?')}
                 </button>
               </div>
 
               {success && (
                 <div style={successStyle}>
                   <i className="ri-checkbox-circle-line" style={{ marginRight: '8px' }}></i>
-                  {success}
+                  {ui(success)}
                 </div>
               )}
 
               {error && (
                 <div style={errorStyle}>
                   <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>
-                  {error}
+                  {ui(error)}
                 </div>
               )}
 
@@ -263,12 +265,12 @@ export default function Login() {
                     }}
                   >
                     <span style={spinnerStyle}></span>
-                    உள்நுழைகிறது…
+                    {ui('உள்நுழைகிறது…')}
                   </span>
                 ) : (
                   <>
                     <i className="ri-login-circle-line" style={{ marginRight: '8px' }}></i>
-                    உள்நுழைக
+                    {ui('உள்நுழைக')}
                   </>
                 )}
               </button>
@@ -277,9 +279,9 @@ export default function Login() {
             {forgotOpen && (
               <div style={forgotCardStyle}>
                 <div style={forgotHeaderStyle}>
-                  <h3 style={forgotTitleStyle}>OTP மூலம் கடவுச்சொல் மாற்றம்</h3>
+                  <h3 style={forgotTitleStyle}>{ui('OTP மூலம் கடவுச்சொல் மாற்றம்')}</h3>
                   <p style={forgotDescStyle}>
-                    பதிவு செய்யப்பட்ட தொலைபேசி எண்ணுக்கு Twilio மூலம் OTP அனுப்பப்படும்.
+                    {ui('பதிவு செய்யப்பட்ட தொலைபேசி எண்ணுக்கு Twilio மூலம் OTP அனுப்பப்படும்.')}
                   </p>
                 </div>
 
@@ -287,13 +289,13 @@ export default function Login() {
                   <div style={fieldGroupStyle}>
                     <label style={labelStyle}>
                       <i className="ri-mail-line" style={{ marginRight: '8px' }}></i>
-                      மின்னஞ்சல்
+                      {ui('மின்னஞ்சல்')}
                     </label>
                     <input
                       type="email"
                       value={resetForm.email}
                       onChange={(e) => updateResetField('email', e.target.value)}
-                      placeholder="உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சல்"
+                        placeholder={ui('உங்கள் பதிவு செய்யப்பட்ட மின்னஞ்சல்')}
                       style={inputStyle}
                       autoComplete="email"
                       disabled={resetLoading}
@@ -307,22 +309,22 @@ export default function Login() {
                       style={secondaryBtnStyle(resetLoading)}
                       disabled={resetLoading}
                     >
-                      {resetLoading && !otpSent ? 'OTP அனுப்புகிறது…' : 'OTP அனுப்பு'}
+                      {resetLoading && !otpSent ? ui('OTP அனுப்புகிறது…') : ui('OTP அனுப்பு')}
                     </button>
-                    {maskedPhone && <span style={noteStyle}>அனுப்பிய எண்: {maskedPhone}</span>}
+                    {maskedPhone && <span style={noteStyle}>{ui('அனுப்பிய எண்:')} {maskedPhone}</span>}
                   </div>
 
                   {resetSuccess && (
                     <div style={successStyle}>
                       <i className="ri-checkbox-circle-line" style={{ marginRight: '8px' }}></i>
-                      {resetSuccess}
+                      {ui(resetSuccess)}
                     </div>
                   )}
 
                   {resetError && (
                     <div style={errorStyle}>
                       <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>
-                      {resetError}
+                      {ui(resetError)}
                     </div>
                   )}
 
@@ -347,13 +349,13 @@ export default function Login() {
                       <div style={fieldGroupStyle}>
                         <label style={labelStyle}>
                           <i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>
-                          புதிய கடவுச்சொல்
+                          {ui('புதிய கடவுச்சொல்')}
                         </label>
                         <input
                           type="password"
                           value={resetForm.newPassword}
                           onChange={(e) => updateResetField('newPassword', e.target.value)}
-                          placeholder="புதிய கடவுச்சொல்"
+                          placeholder={ui('புதிய கடவுச்சொல்')}
                           style={inputStyle}
                           autoComplete="new-password"
                           disabled={resetLoading}
@@ -363,13 +365,13 @@ export default function Login() {
                       <div style={fieldGroupStyle}>
                         <label style={labelStyle}>
                           <i className="ri-lock-password-line" style={{ marginRight: '8px' }}></i>
-                          புதிய கடவுச்சொல் உறுதிப்படுத்தல்
+                          {ui('புதிய கடவுச்சொல் உறுதிப்படுத்தல்')}
                         </label>
                         <input
                           type="password"
                           value={resetForm.confirmPassword}
                           onChange={(e) => updateResetField('confirmPassword', e.target.value)}
-                          placeholder="புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்"
+                          placeholder={ui('புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்')}
                           style={inputStyle}
                           autoComplete="new-password"
                           disabled={resetLoading}
@@ -381,7 +383,7 @@ export default function Login() {
                         style={submitBtnStyle(resetLoading)}
                         disabled={resetLoading}
                       >
-                        {resetLoading ? 'கடவுச்சொல் மாற்றுகிறது…' : 'கடவுச்சொல்லை மாற்று'}
+                        {resetLoading ? ui('கடவுச்சொல் மாற்றுகிறது…') : ui('கடவுச்சொல்லை மாற்று')}
                       </button>
                     </>
                   )}
@@ -391,7 +393,7 @@ export default function Login() {
 
             <div style={linkSectionStyle}>
               <p style={{ margin: 0, color: '#8e99a4', fontSize: 14 }}>
-                கணக்கு இல்லையா?{' '}
+                {ui('கணக்கு இல்லையா?')}{' '}
                 <a
                   href="/register"
                   onClick={(e) => {
@@ -400,14 +402,14 @@ export default function Login() {
                   }}
                   style={linkStyle}
                 >
-                  புதிய கணக்கு உருவாக்கு →
+                  {ui('புதிய கணக்கு உருவாக்கு')} →
                 </a>
               </p>
             </div>
           </div>
 
           <p style={footerStyle}>
-            © 2026 தமிழ் AI பயண திட்டமிடுபவர் — அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை
+            © 2026 {ui('தமிழ் AI பயண திட்டமிடுபவர்')}
           </p>
         </div>
       </div>

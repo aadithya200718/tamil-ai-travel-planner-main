@@ -1,4 +1,3 @@
-const { getDb } = require('../db');
 const { translateEntitiesToTamil } = require('./translationService');
 
 const MODE_LABELS = {
@@ -69,29 +68,6 @@ function estimateDuration(distanceKm, serviceType, mode) {
   return formatDuration(totalMinutes);
 }
 
-function buildWhereClause({ source, destination, budgetCap }, values) {
-  const where = [];
-
-  if (source && destination) {
-    values.push(source, destination);
-    where.push(`source = $${values.length - 1}`);
-    where.push(`destination = $${values.length}`);
-  } else if (source) {
-    values.push(source);
-    where.push(`(source = $${values.length} OR destination = $${values.length})`);
-  } else if (destination) {
-    values.push(destination);
-    where.push(`(source = $${values.length} OR destination = $${values.length})`);
-  }
-
-  if (budgetCap) {
-    values.push(budgetCap);
-    where.push(`price_inr <= $${values.length}`);
-  }
-
-  return where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-}
-
 function mapBusRow(row) {
   return {
     id: row.id,
@@ -106,6 +82,33 @@ function mapBusRow(row) {
     name: `${row.bus_type} பேருந்து`,
     type: 'bus',
   };
+}
+
+function uniqueBy(items, keyFn) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const item of items) {
+    const key = keyFn(item);
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(item);
+    }
+  }
+
+  return unique;
+}
+
+function routeDedupeKey(route) {
+  return [
+    route.mode,
+    route.source,
+    route.destination,
+    route.serviceType,
+    route.trainNumber || '',
+    route.distanceKm,
+    route.price,
+  ].join('|');
 }
 
 function mapTrainRow(row) {
@@ -124,24 +127,104 @@ function mapTrainRow(row) {
   };
 }
 
+async function executeRouteQuery(supabase, tableName, filters, limit) {
+  let query = supabase
+    .from(tableName)
+    .select('*')
+    .order('price_inr', { ascending: true })
+    .order('distance_km', { ascending: true })
+    .limit(limit);
+
+  if (filters.source && filters.destination) {
+    query = query.eq('source', filters.source).eq('destination', filters.destination);
+  } else if (filters.source) {
+    query = query.or(`source.eq.${filters.source},destination.eq.${filters.source}`);
+  } else if (filters.destination) {
+    query = query.or(`source.eq.${filters.destination},destination.eq.${filters.destination}`);
+  }
+
+  if (filters.budgetCap) {
+    query = query.lte('price_inr', filters.budgetCap);
+  }
+
+  const { data, error } = await query;
+  return { data: data || [], error };
+}
+
 async function queryRoutes(mode, filters) {
-  const db = await getDb();
-  const values = [];
-  const whereClause = buildWhereClause(filters, values);
+  const supabase = require('../db').supabase;
   const tableName = mode === 'bus' ? 'bus_routes' : 'train_routes';
   const mapper = mode === 'bus' ? mapBusRow : mapTrainRow;
   const limit = filters.source && filters.destination ? 12 : 20;
 
-  const result = await db.query(
-    `SELECT *
-     FROM ${tableName}
-     ${whereClause}
-     ORDER BY price_inr ASC, distance_km ASC, source ASC, destination ASC
-     LIMIT ${limit}`,
-    values
-  );
+  const { data, error } = await executeRouteQuery(supabase, tableName, filters, limit);
+  if (error) {
+    console.error(`Route query error (${tableName}):`, error.message);
+    return [];
+  }
 
-  return result.rows.map(mapper);
+  if (data.length > 0 || !filters.source || !filters.destination) {
+    return uniqueBy(data.map(mapper), routeDedupeKey);
+  }
+
+  const reverseFilters = {
+    ...filters,
+    source: filters.destination,
+    destination: filters.source,
+  };
+  const reverseResult = await executeRouteQuery(supabase, tableName, reverseFilters, limit);
+
+  if (reverseResult.error) {
+    console.error(`Reverse route query error (${tableName}):`, reverseResult.error.message);
+    return [];
+  }
+
+  return uniqueBy(
+    reverseResult.data.map(row => ({
+      ...mapper(row),
+      source: filters.source,
+      destination: filters.destination,
+    })),
+    routeDedupeKey
+  );
+}
+
+function mapHotelRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    city: row.city,
+    hotelType: row.hotel_type,
+    starRating: row.star_rating,
+    pricePerNight: row.price_per_night,
+    amenities: row.amenities,
+    description: row.description,
+    rating: row.rating,
+    totalReviews: row.total_reviews,
+  };
+}
+
+async function queryHotels(city) {
+  const supabase = require('../db').supabase;
+
+  let query = supabase
+    .from('hotels')
+    .select('*')
+    .order('rating', { ascending: false })
+    .order('price_per_night', { ascending: true })
+    .limit(20);
+
+  if (city) {
+    query = query.eq('city', city);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Hotel query error:', error.message);
+    return [];
+  }
+
+  return (data || []).map(mapHotelRow);
 }
 
 function buildTravelOptions(source, destination, busRoutes, trainRoutes) {
@@ -222,6 +305,49 @@ async function findRelevantRoutes({ mode, entities }) {
   const source = normalizePlace(normalizedEntities.source);
   const destination = normalizePlace(normalizedEntities.destination);
   const budgetCap = getBudgetCap(normalizedEntities.budget);
+
+  // Same-city validation
+  if (source && destination && source === destination) {
+    return {
+      shouldUseDatabase: true,
+      requestedMode,
+      error: true,
+      errorMessage: `"${source}" இருந்து "${destination}" க்கு பயணம் தேட முடியாது. புறப்படும் இடமும் சேரும் இடமும் வேறுபட்டதாக இருக்க வேண்டும்.`,
+      entities: { ...normalizedEntities, source, destination },
+      routeResults: { requestedMode, totalMatches: 0, bus: [], train: [], hotels: [] },
+      itinerary: `பிழை: புறப்படும் இடமும் சேரும் இடமும் ஒன்றாக இருக்கிறது (${source}). வேறு நகரங்களை கொடுக்கவும்.`,
+      travelOptions: { source, destination, options: { bus: [], train: [], flight: [] } },
+    };
+  }
+
+  // Hotel search mode
+  if (requestedMode === 'hotel') {
+    const hotelCity = destination || source || '';
+    const hotels = await queryHotels(hotelCity);
+
+    const hotelLines = ['தங்கும் விடுதி தேடல் முடிவு', ''];
+    if (hotelCity) hotelLines.push(`நகரம்: ${hotelCity}`);
+    hotelLines.push(`மொத்த விடுதிகள்: ${hotels.length}`);
+    hotelLines.push('');
+    hotels.slice(0, 10).forEach((h, i) => {
+      hotelLines.push(`${i + 1}. ${h.name} | ${h.starRating}⭐ | ரூ.${h.pricePerNight}/இரவு | ${h.hotelType}`);
+    });
+
+    return {
+      shouldUseDatabase: true,
+      requestedMode: 'hotel',
+      entities: { ...normalizedEntities, source, destination },
+      routeResults: {
+        requestedMode: 'hotel',
+        totalMatches: hotels.length,
+        bus: [],
+        train: [],
+        hotels,
+      },
+      itinerary: hotelLines.join('\n'),
+      travelOptions: { source: hotelCity, destination: '', options: { bus: [], train: [], flight: [], hotels } },
+    };
+  }
 
   let busRoutes = [];
   let trainRoutes = [];

@@ -4,9 +4,11 @@ import { useRouter } from 'next/router';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ItineraryDisplay from '../components/ItineraryDisplay';
 import { sendQuery, sendVoice, fetchRecent } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Home() {
   const router = useRouter();
+  const { language, ui } = useLanguage();
   const [text, setText] = useState('');
   const [mode, setMode] = useState('bus');
   const [result, setResult] = useState(null);
@@ -64,7 +66,7 @@ export default function Home() {
     setError('');
 
     try {
-      const data = await sendQuery(text.trim(), mode);
+      const data = await sendQuery(text.trim(), mode, language);
       setResult(data);
       setRecent((prev) => [data, ...prev].slice(0, 10));
     } catch (err) {
@@ -82,7 +84,7 @@ export default function Home() {
     setError('');
 
     try {
-      const data = await sendQuery(transcript, mode);
+      const data = await sendQuery(transcript, mode, language);
       setResult(data);
       setRecent((prev) => [data, ...prev].slice(0, 10));
     } catch (err) {
@@ -97,7 +99,7 @@ export default function Home() {
     setError('');
 
     try {
-      const data = await sendVoice(blob, mode);
+      const data = await sendVoice(blob, mode, language);
       setResult(data);
       if (data.transcript) setText(data.transcript);
       setRecent((prev) => [data, ...prev].slice(0, 10));
@@ -111,10 +113,10 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>தமிழ் AI பயண திட்டமிடுபவர்</title>
+        <title>{ui('தமிழ் AI பயண திட்டமிடுபவர்')}</title>
         <meta
           name="description"
-          content="குரல் மற்றும் உரை அடிப்படையில் செயல்படும் தமிழ் பயண திட்டமிடுபவர்"
+          content={ui('குரல் மற்றும் உரை அடிப்படையில் செயல்படும் தமிழ் பயண திட்டமிடுபவர்')}
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -125,41 +127,41 @@ export default function Home() {
             {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 14 }}>
-                  வணக்கம், <b>{user.name}</b>
+                   {ui('வணக்கம்,')} <b>{user.name}</b>
                 </span>
                 <button onClick={handleLogout} style={authBtnStyle}>
-                  வெளியேறு
+                  {ui('வெளியேறு')}
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => router.push('/login')} style={authBtnStyle}>
-                  உள்நுழைக
+                  {ui('உள்நுழைக')}
                 </button>
                 <button
                   onClick={() => router.push('/register')}
                   style={{ ...authBtnStyle, background: '#fff', color: '#667eea' }}
                 >
-                  புதிய கணக்கு
+                  {ui('புதிய கணக்கு')}
                 </button>
               </div>
             )}
           </div>
 
           <div style={titleBlockStyle}>
-            <h1 style={{ margin: 0, fontSize: 28 }}>தமிழ் AI பயண திட்டமிடுபவர்</h1>
+            <h1 style={{ margin: 0, fontSize: 28 }}>{ui('தமிழ் AI பயண திட்டமிடுபவர்')}</h1>
             <p style={titleSubStyle}>
-              உங்கள் பயண திட்டங்களை உரை அல்லது குரல் மூலம் தொடங்குங்கள்
+              {ui('உங்கள் பயண திட்டங்களை உரை அல்லது குரல் மூலம் தொடங்குங்கள்')}
             </p>
           </div>
 
           <button
             onClick={() => setElderlyMode((value) => !value)}
             style={elderlyToggleStyle}
-            title={elderlyMode ? 'சாதாரண எழுத்துக்கு மாறவும்' : 'பெரிய எழுத்துக்கு மாறவும்'}
+            title={elderlyMode ? ui('சாதாரண எழுத்து') : ui('பெரிய எழுத்து')}
           >
             <i className={elderlyMode ? 'ri-font-size' : 'ri-text'} style={{ marginRight: '8px' }}></i>
-            {elderlyMode ? 'சாதாரண எழுத்து' : 'பெரிய எழுத்து'}
+            {elderlyMode ? ui('சாதாரண எழுத்து') : ui('பெரிய எழுத்து')}
           </button>
         </div>
 
@@ -167,25 +169,25 @@ export default function Home() {
           <section style={sectionStyle}>
             <h2 style={sectionTitleStyle}>
               <i className="ri-chat-voice-line" style={{ marginRight: '8px' }}></i>
-              உங்கள் பயணத்தை திட்டமிடுங்கள்
+              {ui('உங்கள் பயணத்தை திட்டமிடுங்கள்')}
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
               <button type="button" onClick={() => setMode('bus')} style={tabBtnStyle(mode === 'bus')}>
                 <i className="ri-bus-fill" style={{ fontSize: 20, marginBottom: 4 }}></i>
-                <div>பேருந்து</div>
+                <div>{ui('பேருந்து')}</div>
               </button>
               <button type="button" onClick={() => setMode('train')} style={tabBtnStyle(mode === 'train')}>
                 <i className="ri-train-fill" style={{ fontSize: 20, marginBottom: 4 }}></i>
-                <div>ரயில்</div>
+                <div>{ui('ரயில்')}</div>
               </button>
               <button type="button" onClick={() => setMode('flight')} style={tabBtnStyle(mode === 'flight')}>
                 <i className="ri-flight-takeoff-line" style={{ fontSize: 20, marginBottom: 4 }}></i>
-                <div>விமானம்</div>
+                <div>{ui('விமானம்')}</div>
               </button>
               <button type="button" onClick={() => setMode('hotel')} style={tabBtnStyle(mode === 'hotel')}>
                 <i className="ri-hotel-fill" style={{ fontSize: 20, marginBottom: 4 }}></i>
-                <div>தங்கும் விடுதி</div>
+                <div>{ui('தங்கும் விடுதி')}</div>
               </button>
             </div>
 
@@ -195,7 +197,7 @@ export default function Home() {
                   type="text"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="எ.கா: Chennai இருந்து Madurai பயண திட்டம் தேவை"
+                  placeholder={ui('எ.கா: Chennai இருந்து Madurai பயண திட்டம் தேவை')}
                   style={inputStyle}
                   disabled={loading}
                 />
@@ -205,10 +207,10 @@ export default function Home() {
                   disabled={loading || !text.trim()}
                 >
                   {loading ? (
-                    'செயலாக்கம்…'
+                      ui('செயலாக்கம்…')
                   ) : (
                     <>
-                      <i className="ri-search-line" style={{ marginRight: '4px' }}></i> தேடு
+                      <i className="ri-search-line" style={{ marginRight: '4px' }}></i> {ui('தேடு')}
                     </>
                   )}
                 </button>
@@ -216,19 +218,20 @@ export default function Home() {
             </form>
 
             <div style={{ textAlign: 'center', margin: '12px 0', color: '#999', fontSize: 13 }}>
-              — அல்லது குரல் மூலம் —
+              {ui('— அல்லது குரல் மூலம் —')}
             </div>
 
             <VoiceRecorder
               onRecorded={handleVoiceRecorded}
               onTranscript={handleVoiceTranscript}
               disabled={loading}
+              language={language}
             />
 
             {error && (
               <div style={errorStyle}>
                 <i className="ri-error-warning-line" style={{ marginRight: '8px' }}></i>
-                {error}
+                {ui(error)}
               </div>
             )}
           </section>
@@ -249,9 +252,9 @@ export default function Home() {
                 className="ri-loader-4-line"
                 style={{ animation: 'spin 1.5s linear infinite', fontSize: 20 }}
               ></i>
-              திட்டம் தயாராகிறது…
-            </div>
-          )}
+                {ui('திட்டம் தயாராகிறது…')}
+              </div>
+            )}
 
           {!loading && result && <ItineraryDisplay result={result} />}
 
@@ -263,14 +266,14 @@ export default function Home() {
               >
                 <h2 style={{ ...sectionTitleStyle, margin: 0 }}>
                   <i className="ri-history-line" style={{ marginRight: '8px' }}></i>
-                  சமீபத்திய தேடல்கள்
+                  {ui('சமீபத்திய தேடல்கள்')}
                 </h2>
                 <span style={{ fontSize: 14, color: '#2887ff' }}>
                   <i
                     className={showRecent ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}
                     style={{ marginRight: '4px' }}
                   ></i>
-                  {showRecent ? 'மறை' : 'காட்டு'}
+                  {showRecent ? ui('மறை') : ui('காட்டு')}
                 </span>
               </div>
 
@@ -288,7 +291,7 @@ export default function Home() {
                           : item.transcript}
                       </span>
                       <span style={{ fontSize: 12, color: '#777', marginLeft: 8 }}>
-                        [{item.intent}]
+                        [{ui(item.intent)}]
                       </span>
                     </li>
                   ))}

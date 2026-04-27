@@ -3,12 +3,13 @@ import {
   createPaymentOrderForBooking,
   verifyBookingPayment,
 } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 let razorpayScriptPromise = null;
 
 function loadRazorpayScript() {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('இந்த சாதனத்தில் Razorpay திறக்க முடியவில்லை'));
+    return Promise.reject(new Error('Unable to open Razorpay on this device'));
   }
 
   if (window.Razorpay) {
@@ -21,7 +22,7 @@ function loadRazorpayScript() {
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
       script.onload = () => resolve(window.Razorpay);
-      script.onerror = () => reject(new Error('Razorpay ஸ்கிரிப்ட் ஏற்ற முடியவில்லை'));
+      script.onerror = () => reject(new Error('Unable to load the Razorpay script'));
       document.body.appendChild(script);
     });
   }
@@ -30,6 +31,7 @@ function loadRazorpayScript() {
 }
 
 export default function RazorpayCheckout({ bookingDetails, onSuccess, onFailure }) {
+  const { ui } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   async function handlePayment() {
@@ -45,14 +47,14 @@ export default function RazorpayCheckout({ bookingDetails, onSuccess, onFailure 
 
       const Razorpay = await loadRazorpayScript();
       const razorpay = new Razorpay({
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_xxxxxxxxxxxxx',
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.order.amount,
         currency: orderData.order.currency,
-        name: 'தமிழ் AI பயண திட்டமிடுபவர்',
-        description: `பதிவு எண்: ${bookingDetails.bookingId}`,
+        name: ui('தமிழ் AI பயண திட்டமிடுபவர்'),
+        description: `${ui('பதிவு எண்')}: ${bookingDetails.bookingId}`,
         order_id: orderData.order.orderId,
         prefill: {
-          name: bookingDetails.customerName || 'பயனர்',
+          name: bookingDetails.customerName || ui('பயனர்'),
           email: bookingDetails.customerEmail || '',
           contact: bookingDetails.customerPhone || '',
         },
@@ -83,9 +85,15 @@ export default function RazorpayCheckout({ bookingDetails, onSuccess, onFailure 
         modal: {
           ondismiss: () => {
             setLoading(false);
-            onFailure(new Error('பணம் செலுத்துதல் ரத்து செய்யப்பட்டது'));
+            onFailure(new Error(ui('பணம் செலுத்துதல் ரத்து செய்யப்பட்டது')));
           },
         },
+      });
+
+      razorpay.on('payment.failed', (response) => {
+        setLoading(false);
+        const description = response?.error?.description || response?.error?.reason;
+         onFailure(new Error(ui(description || 'பணம் செலுத்துதல் தோல்வியடைந்தது')));
       });
 
       razorpay.open();
@@ -100,12 +108,12 @@ export default function RazorpayCheckout({ bookingDetails, onSuccess, onFailure 
       {loading ? (
         <>
           <span style={spinnerStyle}></span>
-          செயலாக்கம்...
+          {ui('செயலாக்கம்…')}
         </>
       ) : (
         <>
           <i className="ri-secure-payment-line" style={{ marginRight: '8px' }}></i>
-          ₹{bookingDetails.totalPrice} செலுத்து
+          ₹{bookingDetails.totalPrice} {ui('செலுத்து')}
         </>
       )}
     </button>

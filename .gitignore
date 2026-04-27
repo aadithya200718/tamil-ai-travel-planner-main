@@ -1,6 +1,6 @@
 # Node.js dependencies
 node_modules/
-
+.gitignore
 # Next.js build output
 frontend/.next/
 frontend/out/
@@ -36,3 +36,32 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+.vscode/
+.zencoder/
+.zenflow/
+
+
+architect.md
+bus_dataset_tamil.xlsx
+CONNECT.md
+firebase-debug.log
+implementation_plan.md
+implementation.md
+prompt.md
+QUICK_COMMANDS.md
+RAZORPAY_INTEGRATION_PROMPT.md
+
+start-all.bat
+TAMIL_DATA_IMPORT_GUIDE.md
+train_dataset_tamil.xlsx
+
+
+backend/QUICK_START.md
+
+backend/RAZORPAY_INTEGRATION.md
+backend/DATABASE_COMMANDS.md
+backend/TRANSLATION_GUIDE.md
+backend/EXAMPLES.MD
+
+frontend/TAMIL_DATA_IMPORT_GUIDE.md
